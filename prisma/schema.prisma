@@ -14,6 +14,7 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+// part of boilerplate, so can probably delete later
 model Post {
     id        Int      @id @default(autoincrement())
     name      String

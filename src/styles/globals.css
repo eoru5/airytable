@@ -1,6 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: var(--font-host-grotesk), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+@theme {
+  --animate-spin-scale: spin-scale 1.8s cubic-bezier(.785, .135, .15, .86) infinite;
+  @keyframes spin-scale {
+    0% {
+      transform: rotate(0) scale(1);
+    }
+  
+    50% {
+      transform: rotate(360deg) scale(.9);
+    }
+  
+    100% {
+      transform: rotate(720deg) scale(1);
+    }
+  }
 }
