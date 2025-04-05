@@ -6,7 +6,7 @@ import Sidebar from "./sidebar";
 import { useState } from "react";
 
 export default function DialogStuff() {
-  let [createBaseOpen, setCreateBaseOpen] = useState(false);
+  const [createBaseOpen, setCreateBaseOpen] = useState(false);
 
   return (
     <Dialog open={createBaseOpen} onClose={() => setCreateBaseOpen(false)} className="relative focus:outline-none z-10">
