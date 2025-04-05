@@ -5,8 +5,8 @@ import Link from "next/link";
 import { LatestPost } from "~/app/_components/post";
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
-import TextLogo from "./_components/text-logo";
-import GoogleLoginButton from "./_components/google-login-button";
+import TextLogo from "./text-logo";
+import GoogleLoginButton from "./google-login-button";
 
 export default async function Login() {
   const hello = await api.post.hello({ text: "from tRPC" });

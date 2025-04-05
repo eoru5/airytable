@@ -1,4 +1,4 @@
-export default function Loading({ size = 1 }: { size?: number }) {
+export default function LoadingCircle({ size = 1 }: { size?: number }) {
   return (
     <svg className="animate-spin-scale motion-reduce:animate-none" data-testid="loading-spinner" width={54 * size} height={54 * size} viewBox="0 0 54 54" style={{ shapeRendering: "geometricPrecision" }} xmlns="http://www.w3.org/2000/svg">
       <path d="M10.9 48.6001C9.30003 47.3001 8.90003 45.0001 10.2 43.3001C11.5 41.7001 13.8 41.2001 15.5 42.5001C16.3 43.0001 17 43.6001 17.9 44.0001C25.4 48.1001 34.7 46.7001 40.7 40.6001C42.2 39.1001 44.5 39.1001 46 40.6001C47.4 42.1001 47.4 44.5001 46 45.9001C37.6 54.4001 24.6 56.5001 14.2 50.7001C13 50.1001 11.9 49.3001 10.9 48.6001Z" className="fill-cyan-500" fillOpacity="1" />
