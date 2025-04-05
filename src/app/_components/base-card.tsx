@@ -66,7 +66,10 @@ export default function BaseCard({ name, id, deleteBase }: { name: string, id: s
                           <div className="cursor-pointer rounded-sm bg-white py-1 px-3 text-md font-light hover:bg-neutral-200 hover:active:bg-neutral-300 transition duration-200 ease-in-out">
                             Cancel
                           </div>
-                          <Button onClick={deleteBase} className="cursor-pointer rounded-sm bg-red-600 py-1 px-3 text-md font-semibold text-white data-[hover]:bg-red-700 data-[hover]:data-[active]:bg-red-800 transition duration-200 ease-in-out">
+                          <Button onClick={e => {
+                            e.stopPropagation();
+                            deleteBase(e);
+                          }} className="cursor-pointer rounded-sm bg-red-600 py-1 px-3 text-md font-semibold text-white data-[hover]:bg-red-700 data-[hover]:data-[active]:bg-red-800 transition duration-200 ease-in-out">
                             Delete
                           </Button>
                         </div>
