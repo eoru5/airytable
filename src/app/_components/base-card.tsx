@@ -63,7 +63,7 @@ export default function BaseCard({ name, id, deleteBase }: { name: string, id: s
                       <div>
                         <div>Are you sure you want to delete {name}?</div>
                         <div className='flex justify-end gap-3 items-center mt-2'>
-                          <div className="cursor-pointer rounded-sm bg-white py-1 px-3 text-md font-light hover:bg-neutral-200 hover:active:bg-neutral-300 transition duration-200 ease-in-out">
+                          <div role="button" onClick={e => e.stopPropagation()} className="cursor-pointer rounded-sm bg-white py-1 px-3 text-md font-light hover:bg-neutral-200 hover:active:bg-neutral-300 transition duration-200 ease-in-out">
                             Cancel
                           </div>
                           <Button onClick={e => {
