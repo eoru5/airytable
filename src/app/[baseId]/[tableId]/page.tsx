@@ -16,7 +16,7 @@ export default async function Page({
   // redirect to base/table/view
   const { baseId, tableId } = await params;
   const table = await api.table.getLatestView({ id: tableId });
-  if (table && table.lastUsedView) {
+  if (table?.lastUsedView) {
     redirect(`/${baseId}/${tableId}/${table.lastUsedView.id}`);
   } else {
     redirect("/");

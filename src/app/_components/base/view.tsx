@@ -1,19 +1,7 @@
 "use client";
 
-import {
-  Button,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-} from "@headlessui/react";
-
-import BaseNavbar from "./base-navbar";
-import Link from "next/link";
+import { Button } from "@headlessui/react";
 import { api } from "~/trpc/react";
-import React, { useState } from "react";
-import base from "./base";
 import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
 

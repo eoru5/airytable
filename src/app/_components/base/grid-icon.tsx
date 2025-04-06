@@ -1,4 +1,4 @@
-export default function Grid({}: {}) {
+export default function Grid() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

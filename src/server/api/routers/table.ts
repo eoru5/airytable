@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const tableRouter = createTRPCRouter({
   getAllViews: protectedProcedure
@@ -80,7 +76,7 @@ export const tableRouter = createTRPCRouter({
       });
 
       if (!table) throw new Error("Error occurred");
-      
+
       // delete everything associated with the table (cells, fields, records, views)
       await ctx.db.cellNumber.deleteMany({
         where: { Record: { tableId: table.id } },
@@ -101,7 +97,7 @@ export const tableRouter = createTRPCRouter({
       await ctx.db.view.deleteMany({
         where: { tableId: table.id },
       });
-      
+
       // finally delete the table
       await ctx.db.table.delete({
         where: { id: table.id },

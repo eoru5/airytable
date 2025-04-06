@@ -15,7 +15,6 @@ import { useState } from "react";
 import React from "react";
 import View from "./view";
 import { useRouter } from "next/navigation";
-import { table } from "console";
 
 export default function Base({
   baseId,
@@ -47,7 +46,7 @@ export default function Base({
       await utils.base.get.invalidate();
     },
   });
-  
+
   return (
     <div className="flex h-screen w-screen flex-col">
       <BaseNavbar baseName={base?.name ?? ""} color={color} />
@@ -60,14 +59,18 @@ export default function Base({
             selectedIndex={selectedIndex}
             onChange={(e) => {
               setSelectedIndex(e);
-              router.push(`/${baseId}/${base?.Table[e]?.id ?? 0}/${base?.Table[e]?.View[0]?.id ?? 0}`);
+              router.push(
+                `/${baseId}/${base?.Table[e]?.id ?? 0}/${base?.Table[e]?.View[0]?.id ?? 0}`,
+              );
             }}
           >
-            <TabList className={`flex ${secondaryColor} w-full px-4 overflow-scroll`}>
+            <TabList
+              className={`flex ${secondaryColor} w-full overflow-scroll px-4`}
+            >
               {base?.Table.map(({ id, name }) => (
                 <React.Fragment key={id}>
                   <Tab
-                    className={`text-nowrap cursor-pointer rounded-t-sm px-4 py-2 text-sm text-white data-[selected]:bg-white data-[selected]:text-black data-[hover]:${tertiaryColor} focus:outline-none data-[focus]:outline-1 data-[focus]:outline-white`}
+                    className={`cursor-pointer rounded-t-sm px-4 py-2 text-sm text-nowrap text-white data-[selected]:bg-white data-[selected]:text-black data-[hover]:${tertiaryColor} focus:outline-none data-[focus]:outline-1 data-[focus]:outline-white`}
                   >
                     {name}
                   </Tab>
@@ -103,7 +106,7 @@ export default function Base({
               </Button>
             </TabList>
             <TabPanels className="grow">
-              {base?.Table.map(({ id, name }) => (
+              {base?.Table.map(({ id }) => (
                 <TabPanel key={id} className="h-full w-full">
                   <View baseId={baseId} tableId={tableId} viewId={viewId} />
                 </TabPanel>

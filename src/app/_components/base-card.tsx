@@ -7,7 +7,6 @@ import {
   MenuItems,
 } from "@headlessui/react";
 import Link from "next/link";
-import type { MouseEventHandler } from "react";
 
 export default function BaseCard({
   name,
