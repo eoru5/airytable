@@ -122,7 +122,7 @@ model CellText {
 }
 
 model View {
-  uuid       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tableId    String   @db.Uuid
   name       String
   criteria   Json

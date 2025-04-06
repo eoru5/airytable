@@ -6,13 +6,16 @@ import Sidebar from "./sidebar";
 import { api } from "~/trpc/react";
 import BaseCard from "./base-card";
 import Loading from "../loading";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const utils = api.useUtils();
+  const router = useRouter()
 
   const createBase = api.base.create.useMutation({
-    onSuccess: async () => {
-      await utils.base.getAll.invalidate();
+    onSuccess: async (base) => {
+      utils.base.getAll.invalidate();
+      router.push(`/${base.id}`)
     },
   });
 
