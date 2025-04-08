@@ -101,6 +101,7 @@ model CellNumber {
   id       Int    @id @default(autoincrement())
   recordId Int
   fieldId  Int
+  value    Int?
   Field    Field  @relation(fields: [fieldId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "CellNumber_fieldId_fkey")
   Record   Record @relation(fields: [recordId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "CellNumber_recordId_fkey")
 }
@@ -114,20 +115,21 @@ model Record {
 }
 
 model CellText {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   recordId Int
   fieldId  Int
-  Field    Field  @relation(fields: [fieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  Record   Record @relation(fields: [recordId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  value    String?
+  Field    Field   @relation(fields: [fieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Record   Record  @relation(fields: [recordId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model View {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tableId    String   @db.Uuid
   name       String
   criteria   Json
   createdAt  DateTime @default(now()) @db.Timestamp(6)
   modifiedAt DateTime @default(now()) @db.Timestamp(6)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   Table      Table    @relation(fields: [tableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 

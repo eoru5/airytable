@@ -4,6 +4,10 @@ import { Button } from "@headlessui/react";
 import { api } from "~/trpc/react";
 import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
+import Table from "./table";
+import { Suspense } from "react";
+import Loading from "~/app/loading";
+import LoadingCircle from "../loading-circle";
 
 export default function View({
   baseId,
@@ -18,16 +22,29 @@ export default function View({
   const router = useRouter();
 
   const [views] = api.table.getAllViews.useSuspenseQuery({ tableId });
+  const [fields] = api.table.getFields.useSuspenseQuery({ tableId });
+  const { data: records, isPending: tableLoading } =
+    api.table.getRecords.useQuery({ tableId });
 
   const createView = api.view.create.useMutation({
     onSuccess: async () => {
       await utils.table.getAllViews.invalidate();
     },
   });
+  const createField = api.field.create.useMutation({
+    onSuccess: async () => {
+      await utils.table.getFields.invalidate();
+    },
+  });
+  const createRecord = api.record.create.useMutation({
+    onSuccess: async () => {
+      await utils.table.getRecords.invalidate();
+    },
+  });
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex border-b-1 border-black/5 bg-white px-3 py-2 text-sm font-light shadow-xs">
+      <div className="flex border-b-1 border-neutral-300 bg-white px-3 py-2 text-sm font-light">
         <div className="cursor-pointer rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
           navbar
         </div>
@@ -101,7 +118,23 @@ export default function View({
             </Button>
           </div>
         </div>
-        <div className="grow bg-yellow-200">table</div>
+        <div className="grow">
+          {tableLoading ? (
+            <div className="flex h-full w-full items-center justify-center">
+              <LoadingCircle />
+            </div>
+          ) : (
+            <Table
+              tableId={tableId}
+              records={records ?? []}
+              fields={fields}
+              createField={(name, type) =>
+                createField.mutate({ tableId, name, type })
+              }
+              createRecord={() => createRecord.mutate({ tableId })}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

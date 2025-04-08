@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTable } from "./table";
 
 export const baseRouter = createTRPCRouter({
   create: protectedProcedure
@@ -10,29 +11,16 @@ export const baseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // create base with a default view/table
-      return ctx.db.base.create({
+      const base = await ctx.db.base.create({
         data: {
           name: input.name,
           User: { connect: { id: ctx.session.user.id } },
-          Table: {
-            create: {
-              name: "Table 1",
-              View: {
-                create: {
-                  name: "Grid View",
-                  criteria: {},
-                },
-              },
-            },
-          },
         },
       });
+      createTable(ctx.db, base.id, "Table 1");
+      return base;
     }),
 
-  // get base data + associated tables + latest used view for each table
-  // getting the view lets us route directly to base/table/view instead of relying on the base/table redirect
-  // which means we only need to rerender (i think) the table section of the page
   get: protectedProcedure
     .input(
       z.object({
@@ -73,7 +61,6 @@ export const baseRouter = createTRPCRouter({
     return bases ?? [];
   }),
 
-  // idk if prisma has triggers or sth that be better for this
   delete: protectedProcedure
     .input(
       z.object({
@@ -89,28 +76,20 @@ export const baseRouter = createTRPCRouter({
         },
         select: { id: true },
       });
+
       const tableIds = tables.map((t) => t.id);
 
       // delete everything associated with base tables (cells, fields, records, views)
       await ctx.db.cellNumber.deleteMany({
         where: { Record: { tableId: { in: tableIds } } },
       });
-
       await ctx.db.cellText.deleteMany({
         where: { Record: { tableId: { in: tableIds } } },
       });
 
-      await ctx.db.field.deleteMany({
-        where: { tableId: { in: tableIds } },
-      });
-
-      await ctx.db.record.deleteMany({
-        where: { tableId: { in: tableIds } },
-      });
-
-      await ctx.db.view.deleteMany({
-        where: { tableId: { in: tableIds } },
-      });
+      await ctx.db.field.deleteMany({ where: { tableId: { in: tableIds } } });
+      await ctx.db.record.deleteMany({ where: { tableId: { in: tableIds } } });
+      await ctx.db.view.deleteMany({ where: { tableId: { in: tableIds } } });
 
       // delete tables
       await ctx.db.table.deleteMany({
@@ -151,6 +130,7 @@ export const baseRouter = createTRPCRouter({
       });
     }),
 
+  // return the latest opened table + view for a base
   getLatestTableView: protectedProcedure
     .input(
       z.object({
@@ -179,13 +159,13 @@ export const baseRouter = createTRPCRouter({
       };
     }),
 
-  // opens a view, updating the base/table/view modifiedat and returning the objects
+  // opens a base, updating the base/table/view modifiedat and returning the objects
   open: protectedProcedure
     .input(
       z.object({
-        baseId: z.string(),
-        tableId: z.string(),
-        viewId: z.string(),
+        baseId: z.string().uuid(),
+        tableId: z.string().uuid(),
+        viewId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

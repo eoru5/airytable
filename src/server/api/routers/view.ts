@@ -1,6 +1,23 @@
+import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+
+export const createView = async (
+  db: PrismaClient,
+  input: {
+    name: string;
+    tableId: string;
+  },
+) => {
+  return db.view.create({
+    data: {
+      tableId: input.tableId,
+      name: input.name,
+      criteria: {},
+    },
+  });
+};
 
 export const viewRouter = createTRPCRouter({
   create: protectedProcedure
@@ -11,13 +28,7 @@ export const viewRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.view.create({
-        data: {
-          tableId: input.tableId,
-          name: input.name,
-          criteria: {},
-        },
-      });
+      return createView(ctx.db, input);
     }),
 
   deleteView: protectedProcedure
