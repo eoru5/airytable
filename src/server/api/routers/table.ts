@@ -1,4 +1,4 @@
-import { record, z } from "zod";
+import { z } from "zod";
 import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "@prisma/client";
@@ -18,8 +18,8 @@ export const createTable = async (
   db: PrismaClient,
   baseId: string,
   name: string,
-  generateData: boolean = true,
-  numRecords: number = 3,
+  generateData = true,
+  numRecords = 3,
 ) => {
   const table = await db.table.create({
     data: {
@@ -30,7 +30,7 @@ export const createTable = async (
   await createView(db, { name: "Grid View", tableId: table.id });
 
   // field = col, record = row
-  const fields = await db.field.createManyAndReturn({
+  await db.field.createManyAndReturn({
     data: [
       { tableId: table.id, name: "Name", Type: "Text" },
       { tableId: table.id, name: "Color", Type: "Text" },
@@ -46,8 +46,8 @@ export const createTable = async (
     generateData,
     generateData
       ? {
-          Name: faker.person.fullName,
-          Color: faker.color.human,
+          Name: () => faker.person.fullName(),
+          Color: () => faker.color.human(),
           // just use the default thing for the num
         }
       : {},
@@ -185,13 +185,9 @@ export const tableRouter = createTRPCRouter({
 
       // format the output
       const formattedRecords = records.map((record) => {
-        const recordData: Record<string, any> = {};
-        record.CellText.forEach(
-          (cell) => (recordData[cell.fieldId] = cell),
-        );
-        record.CellNumber.forEach(
-          (cell) => (recordData[cell.fieldId] = cell),
-        );
+        const recordData: Record<string, unknown> = {};
+        record.CellText.forEach((cell) => (recordData[cell.fieldId] = cell));
+        record.CellNumber.forEach((cell) => (recordData[cell.fieldId] = cell));
         recordData.recordId = record.id;
         return recordData;
       });

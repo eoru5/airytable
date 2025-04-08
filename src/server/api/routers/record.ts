@@ -2,15 +2,14 @@ import { z } from "zod";
 import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import type { PrismaClient } from "@prisma/client";
-import { createView } from "./view";
 import { getFields } from "./table";
 
 export const createRecords = async (
   db: PrismaClient,
   tableId: string,
   amount: number,
-  generateData: boolean = false,
-  generators: { [fieldName: string]: () => string | number } = {},
+  generateData = false,
+  generators: Record<string, () => string | number> = {},
 ) => {
   // make some records
   const createRecords = Array(amount).fill({ tableId });

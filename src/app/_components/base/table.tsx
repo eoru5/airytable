@@ -2,26 +2,15 @@
 
 import type { $Enums } from "@prisma/client";
 import {
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
   type CellContext,
-  type ColumnDef,
-  type NoInfer,
   type RowData,
 } from "@tanstack/react-table";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 import TableCell from "./table-cell";
-import { Button } from "@headlessui/react";
 import AddFieldButton from "./add-field-button";
 import ColumnIcon from "./column-icon";
 
@@ -31,7 +20,7 @@ declare module "@tanstack/react-table" {
   }
 }
 
-export type TableRecord = Record<string, any>;
+export type TableRecord = Record<string, unknown>;
 type TableRecords = TableRecord[];
 type TableFields = {
   id: number;
@@ -41,22 +30,28 @@ type TableFields = {
 }[];
 
 export default function Table({
-  tableId,
   records,
   fields,
   createField,
   createRecord,
 }: {
-  tableId: string;
   records: TableRecords;
   fields: TableFields;
-  createField: (name: string, type: "Text" | "Number") => void;
+  createField: (name: string, type: $Enums.fieldtype) => void;
   createRecord: () => void;
 }) {
   const [data, setData] = useState(records);
   useEffect(() => setData(records), [records]);
+  const types = useMemo(
+    () =>
+      fields.reduce((acc, f) => ({ ...acc, [f.id.toString()]: f.Type }), {}),
+    [fields],
+  );
 
-  const columnHelper = createColumnHelper<TableRecord>();
+  const updateNumberCell = api.cell.updateNumber.useMutation();
+  const updateTextCell = api.cell.updateText.useMutation();
+
+  // const columnHelper = createColumnHelper<TableRecord>();
   const columns = useMemo(
     () =>
       fields.map((f) => ({
@@ -77,21 +72,13 @@ export default function Table({
             column={props.column}
             table={props.table}
             types={types}
-            updateNumberCell={updateNumberCell}
-            updateTextCell={updateTextCell}
+            updateNumberCell={(value, recordId, fieldId) => updateNumberCell.mutateAsync({ fieldId, recordId, value })}
+            updateTextCell={(value, recordId, fieldId) => updateTextCell.mutateAsync({ fieldId, recordId, value })}
           />
         ),
       })),
-    [fields],
+    [fields, types],
   );
-
-  const types: Record<string, string> = {};
-  for (const f of fields) {
-    types[f.id.toString()] = f.Type;
-  }
-
-  const updateNumberCell = api.cell.updateNumber.useMutation();
-  const updateTextCell = api.cell.updateText.useMutation();
 
   const table = useReactTable({
     columns,

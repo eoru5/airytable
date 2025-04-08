@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { TableRecord } from "./table";
 import type { Column, Getter, Row, Table } from "@tanstack/react-table";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "~/server/api/root";
 
 export default function TableCell({
   getValue,
@@ -16,8 +18,17 @@ export default function TableCell({
   column: Column<TableRecord, unknown>;
   table: Table<TableRecord>;
   types: Record<string, string>;
-  updateNumberCell: any;
-  updateTextCell: any;
+  updateNumberCell: (
+    value: number | null,
+    recordId: number,
+    fieldId: number,
+  ) => Promise<inferRouterOutputs<AppRouter>["cell"]["updateNumber"]>;
+
+  updateTextCell: (
+    value: string | null,
+    recordId: number,
+    fieldId: number,
+  ) => Promise<inferRouterOutputs<AppRouter>["cell"]["updateText"]>;
 }) {
   // cell might not exist
   const initialValue = row.original[column.id] ? getValue() : "";
@@ -25,27 +36,28 @@ export default function TableCell({
   const [value, setValue] = useState(initialValue);
   const onBlur = async () => {
     // keep empty cells in the client-side data object to keep code simple
-    console.log(row.original);
 
     const fieldId = column.id;
     try {
-      let cell = {};
       if (types[fieldId] === "Number") {
-        cell = await updateNumberCell.mutateAsync({
-          fieldId: Number(fieldId),
-          recordId: row.original.recordId,
-          value: value === "" ? null : Number(value),
-        });
+        const cell = await updateNumberCell(
+          value === "" ? null : Number(value),
+          Number(row.original.recordId),
+          Number(fieldId),
+        );
+        // if everything checks out, update the state var
+        table.options.meta?.updateData(row.index, column.id, cell);
       } else if (types[fieldId] === "Text") {
-        cell = await updateTextCell.mutateAsync({
-          fieldId: Number(fieldId),
-          recordId: row.original.recordId,
-          value: value === "" ? null : (value as string),
-        });
+        const cell = await updateTextCell(
+          value === "" ? null : (value as string),
+          Number(row.original.recordId),
+          Number(fieldId),
+        );
+        // if everything checks out, update the state var
+        table.options.meta?.updateData(row.index, column.id, cell);
       }
-      // if everything checks out, update the state var
-      table.options.meta?.updateData(row.index, column.id, cell);
     } catch (error) {
+      console.log('Error occured, resetting value');
       // else reset to init val
       setValue(initialValue);
     }

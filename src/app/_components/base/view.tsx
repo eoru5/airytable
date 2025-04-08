@@ -5,8 +5,6 @@ import { api } from "~/trpc/react";
 import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
 import Table from "./table";
-import { Suspense } from "react";
-import Loading from "~/app/loading";
 import LoadingCircle from "../loading-circle";
 
 export default function View({
@@ -125,7 +123,6 @@ export default function View({
             </div>
           ) : (
             <Table
-              tableId={tableId}
               records={records ?? []}
               fields={fields}
               createField={(name, type) =>

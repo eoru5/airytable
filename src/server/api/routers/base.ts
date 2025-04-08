@@ -17,7 +17,7 @@ export const baseRouter = createTRPCRouter({
           User: { connect: { id: ctx.session.user.id } },
         },
       });
-      createTable(ctx.db, base.id, "Table 1");
+      await createTable(ctx.db, base.id, "Table 1");
       return base;
     }),
 
