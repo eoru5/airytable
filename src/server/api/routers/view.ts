@@ -39,7 +39,6 @@ export const viewRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // check user owns view
-      // could prob do this better tbh
       const view = await ctx.db.view.findFirst({
         where: {
           id: input.id,
@@ -55,6 +54,44 @@ export const viewRouter = createTRPCRouter({
 
       await ctx.db.view.delete({
         where: { id: view.id },
+      });
+
+      return { success: true };
+    }),
+
+  updateSort: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        sort: z.array(
+          z.object({
+            id: z.string(),
+            desc: z.boolean(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const view = await ctx.db.view.findFirst({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!view) throw new Error("Error occurred");
+
+      await ctx.db.view.update({
+        where: { id: view.id },
+        data: {
+          criteria: {
+            sort: input.sort,
+          },
+        },
       });
 
       return { success: true };

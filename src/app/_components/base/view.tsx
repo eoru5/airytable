@@ -6,6 +6,7 @@ import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
 import Table from "./table";
 import LoadingCircle from "../loading-circle";
+import ViewNavbar from "./view-navbar";
 
 export default function View({
   baseId,
@@ -21,8 +22,9 @@ export default function View({
 
   const [views] = api.table.getAllViews.useSuspenseQuery({ tableId });
   const [fields] = api.table.getFields.useSuspenseQuery({ tableId });
+
   const { data: records, isPending: tableLoading } =
-    api.table.getRecords.useQuery({ tableId });
+    api.table.getRecords.useQuery({ tableId, viewId });
 
   const createView = api.view.create.useMutation({
     onSuccess: async () => {
@@ -40,13 +42,15 @@ export default function View({
     },
   });
 
+  const updateSort = api.view.updateSort.useMutation({
+    onSuccess: async () => {
+      await utils.table.getRecords.invalidate();
+    },
+  });
+
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex border-b-1 border-neutral-300 bg-white px-3 py-2 text-sm font-light">
-        <div className="cursor-pointer rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
-          navbar
-        </div>
-      </div>
+      <ViewNavbar />
       <div className="flex h-full w-full">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
           <div className="flex flex-col gap-1">
@@ -128,7 +132,10 @@ export default function View({
               createField={(name, type) =>
                 createField.mutate({ tableId, name, type })
               }
-              createRecord={() => createRecord.mutate({ tableId })}
+              createRecord={(numRows, randomData) =>
+                createRecord.mutate({ tableId, numRows, randomData })
+              }
+              updateSort={(sort) => updateSort.mutate({ id: viewId, sort })}
             />
           )}
         </div>

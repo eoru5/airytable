@@ -38,7 +38,8 @@ export const createRecords = async (
         numberCells.push(cell);
       } else {
         const value =
-          (generators[field.name]?.() as string) ?? faker.animal.cat();
+          (generators[field.name]?.() as string) ??
+          faker.word.noun({ length: { min: 1, max: 5 } });
         const cell = {
           recordId: record.id,
           fieldId: field.id,
@@ -57,6 +58,8 @@ export const recordRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
+        numRows: z.number().min(1),
+        randomData: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -64,8 +67,12 @@ export const recordRouter = createTRPCRouter({
         where: { id: input.tableId, Base: { userId: ctx.session.user.id } },
       });
       if (!table) throw new Error("Table not found or user doesn't have perms");
-      await ctx.db.record.create({
-        data: { tableId: input.tableId },
-      });
+
+      await createRecords(
+        ctx.db,
+        input.tableId,
+        input.numRows,
+        input.randomData,
+      );
     }),
 });

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import type { PrismaClient } from "@prisma/client";
+import { type PrismaClient, Prisma } from "@prisma/client";
 import { createView } from "./view";
 import { db } from "~/server/db";
 import { createRecords } from "./record";
@@ -160,11 +160,18 @@ export const tableRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
+        viewId: z.string(),
         offset: z.number().min(0).default(0),
         size: z.number().min(1).default(100),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const view = await ctx.db.view.findUnique({
+        where: { id: input.viewId },
+      });
+
+      if (!view) throw new Error("View not found");
+
       const records = await ctx.db.record.findMany({
         where: {
           tableId: input.tableId,
@@ -176,20 +183,65 @@ export const tableRouter = createTRPCRouter({
         },
         skip: input.offset,
         take: input.size,
-        orderBy: { id: "asc" },
         include: {
           CellNumber: true,
           CellText: true,
         },
       });
 
+      const recordsById = new Map(records.map((r) => [r.id, r]));
+
+      // build sort qry based on view
+      const sort =
+        (view.criteria as { sort?: { id: string; desc: boolean }[] })?.sort ??
+        [];
+
+      const fields = await ctx.db.field.findMany({
+        where: { tableId: input.tableId },
+        select: { id: true, Type: true },
+      });
+
+      const fieldsById: Record<string, string> = fields.reduce(
+        (acc, f) => ({ ...acc, [f.id.toString()]: f.Type }),
+        {},
+      );
+
+      // idk
+      const qry = `
+        select r.id
+        from "Record" r
+        left join "Field" f on r."tableId" = f."tableId"
+        left join "CellText" ct on ct."recordId" = r.id and ct."fieldId" = f.id
+        left join "CellNumber" cn on cn."recordId" = r.id and cn."fieldId" = f.id
+        where
+          r."tableId" = '${input.tableId}'
+          ${sort.length > 0 ? `and f.id in (${sort.map((s) => s.id).join(", ")})` : ""}
+        group by r.id
+        ${
+          sort.length > 0
+            ? "order by " +
+              sort
+                .map(
+                  (s) =>
+                    `max(case when f.id = ${s.id} then ${fieldsById[s.id] === "Text" ? "ct" : "cn"}.value end) ${s.desc ? "desc" : "asc"}`,
+                )
+                .join(",\n")
+            : ""
+        }
+        ;
+      `;
+      const orderedRecords = await ctx.db.$queryRaw<
+        { id: number }[]
+      >`${Prisma.raw(qry)}`;
+
       // format the output
-      const formattedRecords = records.map((record) => {
-        const recordData: Record<string, unknown> = {};
-        record.CellText.forEach((cell) => (recordData[cell.fieldId] = cell));
-        record.CellNumber.forEach((cell) => (recordData[cell.fieldId] = cell));
-        recordData.recordId = record.id;
-        return recordData;
+      const formattedRecords = orderedRecords.map(({ id }) => {
+        const result: Record<string, unknown> = {};
+        const record = recordsById.get(id)!;
+        record.CellText.forEach((cell) => (result[cell.fieldId] = cell));
+        record.CellNumber.forEach((cell) => (result[cell.fieldId] = cell));
+        result.recordId = record.id;
+        return result;
       });
 
       return formattedRecords;
