@@ -7,9 +7,6 @@
   - column filters (db level)
     - numbers: greater than, smaller than
     - text: is not empty, is empty, contains, not contains, equal to
-  - column sorting (db level)
-    - text A->Z, Z->A
-    - numbers: decreasing or increasing
   - can search through and hide/show columns (db level?)
 - polish loading states
 - refactor code

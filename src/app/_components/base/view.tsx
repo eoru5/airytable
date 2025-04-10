@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import Table from "./table";
 import LoadingCircle from "../loading-circle";
 import ViewNavbar from "./view-navbar";
+import type { SortingState } from "@tanstack/react-table";
+import { useState, useEffect } from "react";
 
 export default function View({
   baseId,
@@ -48,9 +50,28 @@ export default function View({
     },
   });
 
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  const updateView = () => {
+    const currentView = views.find((v) => v.id === viewId)!;
+    setSorting(
+      (currentView.criteria as { sort?: { id: string; desc: boolean }[] })
+        ?.sort ?? [],
+    );
+  };
+
+  useEffect(() => updateView(), [viewId]);
+
+  useEffect(() => {
+    // save new sort configs to db
+    if (sorting.length > 0) {
+      updateSort.mutate({ id: viewId, sort: sorting });
+    }
+  }, [sorting]);
+
   return (
     <div className="flex h-full w-full flex-col">
-      <ViewNavbar />
+      <ViewNavbar sorting={sorting} setSorting={setSorting} fields={fields}/>
       <div className="flex h-full w-full">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
           <div className="flex flex-col gap-1">
@@ -135,7 +156,8 @@ export default function View({
               createRecord={(numRows, randomData) =>
                 createRecord.mutate({ tableId, numRows, randomData })
               }
-              updateSort={(sort) => updateSort.mutate({ id: viewId, sort })}
+              sorting={sorting}
+              setSorting={setSorting}
             />
           )}
         </div>

@@ -8,6 +8,7 @@ import {
   useReactTable,
   type CellContext,
   type HeaderContext,
+  type OnChangeFn,
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
@@ -26,29 +27,29 @@ declare module "@tanstack/react-table" {
 
 export type TableRecord = Record<string, unknown>;
 type TableRecords = TableRecord[];
-type TableFields = {
+export type TableField = {
   id: number;
   name: string;
   tableId: string | null;
   Type: $Enums.fieldtype;
-}[];
+};
+export type TableFields = TableField[];
 
 export default function Table({
   records,
   fields,
   createField,
   createRecord,
-  updateSort,
+  sorting,
+  setSorting,
 }: {
   records: TableRecords;
   fields: TableFields;
   createField: (name: string, type: $Enums.fieldtype) => void;
   createRecord: (numRows: number, randomData: boolean) => void;
-  updateSort: (sort: SortingState) => void;
+  sorting: SortingState;
+  setSorting: OnChangeFn<SortingState>;
 }) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  useEffect(() => updateSort(sorting), [sorting]);
-
   const [data, setData] = useState(records);
   useEffect(() => setData(records), [records]);
   const types = useMemo(
@@ -66,13 +67,46 @@ export default function Table({
       fields.map((f) => ({
         header: (props: HeaderContext<TableRecord, unknown>) => (
           <div
-            className="flex cursor-pointer items-center gap-1"
+            className="flex cursor-pointer items-center justify-between"
             onClick={props.column.getToggleSortingHandler()}
           >
-            <div className="text-neutral-500">
-              <ColumnIcon type={f.Type} />
+            <div className="flex items-center gap-1">
+              <div className="text-neutral-500">
+                <ColumnIcon type={f.Type} />
+              </div>
+              {f.name}
             </div>
-            {f.name}
+
+            <div className="text-neutral-600">
+              {props.column.getIsSorted() === "asc" && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="size-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+              {props.column.getIsSorted() === "desc" && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="size-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </div>
           </div>
         ),
         accessorKey: `${f.id}.value`,
@@ -116,6 +150,7 @@ export default function Table({
           }),
         ),
     },
+    isMultiSortEvent: () => true, // always multi sort instead of needing to press shift
     manualSorting: true,
     state: {
       sorting,
@@ -152,7 +187,7 @@ export default function Table({
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               <td className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white px-4 py-1 text-sm font-light">
-                {row.id}
+                {Number(row.id) + 1}
               </td>
               {row.getVisibleCells().map((cell) => (
                 <td
