@@ -1,10 +1,24 @@
 import { z } from "zod";
 import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { type PrismaClient, Prisma } from "@prisma/client";
+import { type PrismaClient } from "@prisma/client";
 import { createView } from "./view";
 import { db } from "~/server/db";
 import { createRecords } from "./record";
+import { type ColumnFiltersState } from "~/app/_components/base/table";
+
+export enum NumberFilters {
+  LessThan = "<",
+  GreaterThan = ">",
+}
+export enum TextFilters {
+  Is = "is",
+  Contains = "contains",
+  DoesNotContain = "does not contain",
+  IsEmpty = "is empty",
+  IsNotEmpty = "is not empty",
+}
+export type FilterType = NumberFilters | TextFilters;
 
 // currently just order by id
 export const getFields = async (tableId: string) => {
@@ -191,48 +205,82 @@ export const tableRouter = createTRPCRouter({
 
       const recordsById = new Map(records.map((r) => [r.id, r]));
 
-      // build sort qry based on view
-      const sort =
-        (view.criteria as { sort?: { id: string; desc: boolean }[] })?.sort ??
-        [];
+      const sort = (view.sort as { id: string; desc: boolean }[]) ?? [];
+      const filters = (view.filters as ColumnFiltersState) ?? [];
 
       const fields = await ctx.db.field.findMany({
         where: { tableId: input.tableId },
         select: { id: true, Type: true },
       });
 
-      const fieldsById: Record<string, string> = fields.reduce(
-        (acc, f) => ({ ...acc, [f.id.toString()]: f.Type }),
-        {},
-      );
+      const filterConditions = filters
+        .filter((f) => f.value !== undefined)
+        .map((f) => {
+          if (f.type in NumberFilters) {
+            switch (f.type as NumberFilters) {
+              case NumberFilters.GreaterThan:
+                return `f${f.id}.value > ${f.value}`;
+              case NumberFilters.LessThan:
+                return `f${f.id}.value < ${f.value}`;
+            }
+          }
 
-      // idk
+          if (f.type in TextFilters) {
+            switch (f.type as TextFilters) {
+              case TextFilters.Contains:
+                return `f${f.id}.value ilike '%${f.value}%'`;
+              case TextFilters.DoesNotContain:
+                return `f${f.id}.value not ilike '%${f.value}%'`;
+              case TextFilters.Is:
+                return `f${f.id}.value = '${f.value}'`;
+              case TextFilters.IsEmpty:
+                return `f${f.id}.value is null or f${f.id}.value = ''`;
+              case TextFilters.IsNotEmpty:
+                return `f${f.id}.value is not null and f${f.id}.value != ''`;
+            }
+          }
+        });
+
+      console.log(filterConditions);
+
+      // better to just get the vals from this one qry
+      // r.id${fields.length > 0 ? "," : ""}
+      // ${fields.map((f) => `f${f.id}.value`).join(",\n")}
       const qry = `
-        select r.id
+        select
+          r.id  
         from "Record" r
-        left join "Field" f on r."tableId" = f."tableId"
-        left join "CellText" ct on ct."recordId" = r.id and ct."fieldId" = f.id
-        left join "CellNumber" cn on cn."recordId" = r.id and cn."fieldId" = f.id
-        where
-          r."tableId" = '${input.tableId}'
-          ${sort.length > 0 ? `and f.id in (${sort.map((s) => s.id).join(", ")})` : ""}
-        group by r.id
-        ${
-          sort.length > 0
-            ? "order by " +
-              sort
-                .map(
-                  (s) =>
-                    `max(case when f.id = ${s.id} then ${fieldsById[s.id] === "Text" ? "ct" : "cn"}.value end) ${s.desc ? "desc" : "asc"}`,
-                )
-                .join(",\n")
-            : ""
-        }
-        ;
+
+        ${fields
+          .map(
+            (f) =>
+              `
+              left join (
+                select "recordId", value
+                from "${f.Type === "Text" ? "CellText" : "CellNumber"}"
+                where "fieldId" = ${f.id}
+              ) as f${f.id} on f${f.id}."recordId" = r.id
+            `,
+          )
+          .join("\n")}
+
+        where r."tableId" = '${input.tableId}'
+        ${filterConditions.length > 0 ? "\nand " + filterConditions.join("and\n") : ""}
+
+        order by
+        ${sort
+          .map((s) => `f${s.id}.value ${s.desc ? "desc" : "asc"}`)
+          .join(",\n")}
+          ${sort.length > 0 ? "," : ""}r.id
+          ;
       `;
-      const orderedRecords = await ctx.db.$queryRaw<
-        { id: number }[]
-      >`${Prisma.raw(qry)}`;
+
+      const orderedRecords = await ctx.db.$queryRawUnsafe<
+        {
+          id: number;
+          // [key: string]: string | number | null;
+        }[]
+      >(qry);
 
       // format the output
       const formattedRecords = orderedRecords.map(({ id }) => {

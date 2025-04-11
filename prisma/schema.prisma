@@ -126,10 +126,11 @@ model CellText {
 model View {
   tableId    String   @db.Uuid
   name       String
-  criteria   Json
   createdAt  DateTime @default(now()) @db.Timestamp(6)
   modifiedAt DateTime @default(now()) @db.Timestamp(6)
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sort       Json[]
+  filters    Json[]
   Table      Table    @relation(fields: [tableId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 

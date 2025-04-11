@@ -4,6 +4,8 @@ import type { Column, Getter, Row, Table } from "@tanstack/react-table";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "~/server/api/root";
 
+const NUMERIC = /^[-+]?\d*\.?\d*$/;
+
 export default function TableCell({
   getValue,
   row,
@@ -57,7 +59,7 @@ export default function TableCell({
         table.options.meta?.updateData(row.index, column.id, cell);
       }
     } catch (error) {
-      console.log('Error occured, resetting value');
+      console.log("Error occured, resetting value");
       // else reset to init val
       setValue(initialValue);
     }
@@ -71,7 +73,15 @@ export default function TableCell({
     <input
       className="h-full w-full px-4 py-1"
       value={value as string}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => {
+        if (
+          (types[column.id] === "Number" &&
+            (e.target.value === "" || NUMERIC.test(e.target.value))) ||
+          types[column.id] === "Text"
+        ) {
+          setValue(e.target.value);
+        }
+      }}
       onBlur={onBlur}
     />
   );

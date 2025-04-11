@@ -25,6 +25,37 @@ declare module "@tanstack/react-table" {
   }
 }
 
+export enum NumberFilters {
+  LessThan = "<",
+  GreaterThan = ">",
+}
+export enum TextFilters {
+  Is = "is",
+  Contains = "contains",
+  DoesNotContain = "does not contain",
+  IsEmpty = "is empty",
+  IsNotEmpty = "is not empty",
+}
+export type FilterType = NumberFilters | TextFilters;
+
+export type ColumnFilter = {
+  id: string; // field id
+  type: FilterType;
+  value?: string;
+};
+
+export const numberFilters = ["<", ">"];
+
+export const textFilters = [
+  "is",
+  "contains",
+  "does not contain",
+  "is empty",
+  "is not empty",
+];
+
+export type ColumnFiltersState = ColumnFilter[];
+
 export type TableRecord = Record<string, unknown>;
 type TableRecords = TableRecord[];
 export type TableField = {

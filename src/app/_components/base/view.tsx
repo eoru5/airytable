@@ -4,7 +4,7 @@ import { Button } from "@headlessui/react";
 import { api } from "~/trpc/react";
 import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
-import Table from "./table";
+import Table, { type ColumnFiltersState } from "./table";
 import LoadingCircle from "../loading-circle";
 import ViewNavbar from "./view-navbar";
 import type { SortingState } from "@tanstack/react-table";
@@ -50,28 +50,48 @@ export default function View({
     },
   });
 
+  const updateFilter = api.view.updateFilter.useMutation({
+    onSuccess: async () => {
+      await utils.table.getRecords.invalidate();
+    },
+  });
+
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const updateView = () => {
     const currentView = views.find((v) => v.id === viewId)!;
-    setSorting(
-      (currentView.criteria as { sort?: { id: string; desc: boolean }[] })
-        ?.sort ?? [],
-    );
+    setSorting((currentView.sort as { id: string; desc: boolean }[]) ?? []);
+    setColumnFilters((currentView.filters as ColumnFiltersState) ?? []);
+    setLoaded(true);
   };
 
   useEffect(() => updateView(), [viewId]);
 
   useEffect(() => {
+    // save new filter configs to db
+    if (loaded) {
+      updateFilter.mutate({ id: viewId, filters: columnFilters });
+    }
+  }, [columnFilters]);
+
+  useEffect(() => {
     // save new sort configs to db
-    if (sorting.length > 0) {
+    if (loaded) {
       updateSort.mutate({ id: viewId, sort: sorting });
     }
   }, [sorting]);
 
   return (
     <div className="flex h-full w-full flex-col">
-      <ViewNavbar sorting={sorting} setSorting={setSorting} fields={fields}/>
+      <ViewNavbar
+        sorting={sorting}
+        setSorting={setSorting}
+        fields={fields}
+        columnFilters={columnFilters}
+        setColumnFilters={setColumnFilters}
+      />
       <div className="flex h-full w-full">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
           <div className="flex flex-col gap-1">

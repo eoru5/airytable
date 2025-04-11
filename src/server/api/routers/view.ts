@@ -3,6 +3,19 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+// importing them doesnt work for some reason
+export enum NumberFilters {
+  LessThan = "<",
+  GreaterThan = ">",
+}
+enum TextFilters {
+  Is = "is",
+  Contains = "contains",
+  DoesNotContain = "does not contain",
+  IsEmpty = "is empty",
+  IsNotEmpty = "is not empty",
+}
+
 export const createView = async (
   db: PrismaClient,
   input: {
@@ -14,7 +27,8 @@ export const createView = async (
     data: {
       tableId: input.tableId,
       name: input.name,
-      criteria: {},
+      sort: [],
+      filters: [],
     },
   });
 };
@@ -88,9 +102,47 @@ export const viewRouter = createTRPCRouter({
       await ctx.db.view.update({
         where: { id: view.id },
         data: {
-          criteria: {
-            sort: input.sort,
+          sort: input.sort,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  updateFilter: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        filters: z.array(
+          z.object({
+            id: z.string(),
+            type: z.union([
+              z.nativeEnum(NumberFilters),
+              z.nativeEnum(TextFilters),
+            ]),
+            value: z.string().optional(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const view = await ctx.db.view.findFirst({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
           },
+        },
+      });
+
+      if (!view) throw new Error("Error occurred");
+
+      await ctx.db.view.update({
+        where: { id: view.id },
+        data: {
+          filters: input.filters,
         },
       });
 
