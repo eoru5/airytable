@@ -216,16 +216,16 @@ export const tableRouter = createTRPCRouter({
       const filterConditions = filters
         .filter((f) => f.value !== undefined)
         .map((f) => {
-          if (f.type in NumberFilters) {
+          if (Object.values(NumberFilters).includes(f.type as NumberFilters)) {
             switch (f.type as NumberFilters) {
               case NumberFilters.GreaterThan:
                 return `f${f.id}.value > ${f.value}`;
               case NumberFilters.LessThan:
                 return `f${f.id}.value < ${f.value}`;
             }
-          }
-
-          if (f.type in TextFilters) {
+          } else if (
+            Object.values(TextFilters).includes(f.type as TextFilters)
+          ) {
             switch (f.type as TextFilters) {
               case TextFilters.Contains:
                 return `f${f.id}.value ilike '%${f.value}%'`;
@@ -240,8 +240,6 @@ export const tableRouter = createTRPCRouter({
             }
           }
         });
-
-      console.log(filterConditions);
 
       // better to just get the vals from this one qry
       // r.id${fields.length > 0 ? "," : ""}

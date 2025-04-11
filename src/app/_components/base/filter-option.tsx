@@ -153,7 +153,6 @@ export default function FilterOption({
         value={value}
         onChange={e => setValue(e.target.value)}
         onBlur={(e) => {
-          if (!e.target.value) return;
           const newFilters = [...columnFilters];
           newFilters[fieldIdx]!.value = e.target.value;
           setColumnFilters(newFilters);
