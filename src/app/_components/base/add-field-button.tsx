@@ -24,7 +24,7 @@ export default function AddFieldButton({
     <Menu>
       <MenuButton>
         <div
-          className="cursor-pointer border-r-1 border-b-1 border-neutral-300 bg-neutral-100 px-4 py-1 transition duration-150 hover:bg-neutral-200"
+          className="h-full cursor-pointer border-r-1 border-b-1 border-neutral-300 bg-neutral-100 px-4 py-1 transition duration-150 hover:bg-neutral-200"
           role="button"
         >
           <svg

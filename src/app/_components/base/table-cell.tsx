@@ -32,8 +32,7 @@ export default function TableCell({
     fieldId: number,
   ) => Promise<inferRouterOutputs<AppRouter>["cell"]["updateText"]>;
 }) {
-  // cell might not exist
-  const initialValue = row.original[column.id] ? getValue() : "";
+  const initialValue = row.original[`f${column.id}`] ? getValue() : "";
 
   const [value, setValue] = useState(initialValue);
   const onBlur = async () => {
@@ -44,7 +43,7 @@ export default function TableCell({
       if (types[fieldId] === "Number") {
         const cell = await updateNumberCell(
           value === "" ? null : Number(value),
-          Number(row.original.recordId),
+          Number(row.original.id),
           Number(fieldId),
         );
         // if everything checks out, update the state var
@@ -52,7 +51,7 @@ export default function TableCell({
       } else if (types[fieldId] === "Text") {
         const cell = await updateTextCell(
           value === "" ? null : (value as string),
-          Number(row.original.recordId),
+          Number(row.original.id),
           Number(fieldId),
         );
         // if everything checks out, update the state var

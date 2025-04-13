@@ -1,11 +1,13 @@
 export default function AddRecordButton({
+  text = "",
   createRecord,
 }: {
+  text?: string;
   createRecord: () => void;
 }) {
   return (
     <div
-      className="h-full w-full cursor-pointer px-4 py-1 transition duration-150 hover:bg-neutral-200"
+      className="flex h-full w-full cursor-pointer items-center justify-start py-1 px-3 transition duration-150 hover:bg-neutral-200"
       role="button"
       onClick={() => createRecord()}
     >
@@ -23,6 +25,7 @@ export default function AddRecordButton({
           d="M12 4.5v15m7.5-7.5h-15"
         />
       </svg>
+      {text}
     </div>
   );
 }

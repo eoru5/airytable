@@ -5,9 +5,8 @@ import { api } from "~/trpc/react";
 import Grid from "./grid-icon";
 import { useRouter } from "next/navigation";
 import Table, { type ColumnFiltersState } from "./table";
-import LoadingCircle from "../loading-circle";
 import ViewNavbar from "./view-navbar";
-import type { SortingState } from "@tanstack/react-table";
+import { type SortingState } from "@tanstack/react-table";
 import { useState, useEffect } from "react";
 
 export default function View({
@@ -25,9 +24,6 @@ export default function View({
   const [views] = api.table.getAllViews.useSuspenseQuery({ tableId });
   const [fields] = api.table.getFields.useSuspenseQuery({ tableId });
 
-  const { data: records, isPending: tableLoading } =
-    api.table.getRecords.useQuery({ tableId, viewId });
-
   const createView = api.view.create.useMutation({
     onSuccess: async () => {
       await utils.table.getAllViews.invalidate();
@@ -38,6 +34,7 @@ export default function View({
       await utils.table.getFields.invalidate();
     },
   });
+
   const createRecord = api.record.create.useMutation({
     onSuccess: async () => {
       await utils.table.getRecords.invalidate();
@@ -84,7 +81,7 @@ export default function View({
   }, [sorting]);
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col overflow-auto">
       <ViewNavbar
         sorting={sorting}
         setSorting={setSorting}
@@ -92,7 +89,7 @@ export default function View({
         columnFilters={columnFilters}
         setColumnFilters={setColumnFilters}
       />
-      <div className="flex h-full w-full">
+      <div className="flex h-full w-full overflow-auto">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
           <div className="flex flex-col gap-1">
             {views.map((view) => (
@@ -161,25 +158,20 @@ export default function View({
             </Button>
           </div>
         </div>
-        <div className="grow">
-          {tableLoading ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <LoadingCircle />
-            </div>
-          ) : (
-            <Table
-              records={records ?? []}
-              fields={fields}
-              createField={(name, type) =>
-                createField.mutate({ tableId, name, type })
-              }
-              createRecord={(numRows, randomData) =>
-                createRecord.mutate({ tableId, numRows, randomData })
-              }
-              sorting={sorting}
-              setSorting={setSorting}
-            />
-          )}
+        <div className="h-full w-full">
+          <Table
+            tableId={tableId}
+            viewId={viewId}
+            fields={fields}
+            createField={(name, type) =>
+              createField.mutate({ tableId, name, type })
+            }
+            createRecord={(numRows, randomData) =>
+              createRecord.mutate({ tableId, numRows, randomData })
+            }
+            sorting={sorting}
+            setSorting={setSorting}
+          />
         </div>
       </div>
     </div>

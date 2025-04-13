@@ -7,17 +7,28 @@ import {
   getCoreRowModel,
   useReactTable,
   type CellContext,
+  type ColumnDef,
   type HeaderContext,
   type OnChangeFn,
+  type Row,
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "~/trpc/react";
 import TableCell from "./table-cell";
 import AddFieldButton from "./add-field-button";
 import ColumnIcon from "./column-icon";
 import AddRecordButton from "./add-record-button";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { keepPreviousData } from "@tanstack/react-query";
+import LoadingCircle from "../loading-circle";
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
@@ -67,22 +78,23 @@ export type TableField = {
 export type TableFields = TableField[];
 
 export default function Table({
-  records,
+  tableId,
+  viewId,
   fields,
   createField,
   createRecord,
   sorting,
   setSorting,
 }: {
-  records: TableRecords;
+  tableId: string;
+  viewId: string;
   fields: TableFields;
   createField: (name: string, type: $Enums.fieldtype) => void;
   createRecord: (numRows: number, randomData: boolean) => void;
   sorting: SortingState;
   setSorting: OnChangeFn<SortingState>;
 }) {
-  const [data, setData] = useState(records);
-  useEffect(() => setData(records), [records]);
+  const tableContainerRef = useRef(null);
   const types = useMemo(
     () =>
       fields.reduce((acc, f) => ({ ...acc, [f.id.toString()]: f.Type }), {}),
@@ -93,12 +105,28 @@ export default function Table({
   const updateTextCell = api.cell.updateText.useMutation();
 
   const columnHelper = createColumnHelper<TableRecord>();
-  const columns = useMemo(
-    () =>
-      fields.map((f) => ({
+  const columns = useMemo(() => {
+    const cols: ColumnDef<TableRecord, unknown>[] = [
+      {
+        header: "",
+        id: "id",
+        enableSorting: false,
+        cell: (props: CellContext<TableRecord, unknown>) => (
+          <div className="h-full w-full px-4 py-1">
+            {(table
+              .getSortedRowModel()
+              ?.flatRows?.findIndex((flatRow) => flatRow.id === props.row.id) ||
+              0) + 1}
+          </div>
+        ),
+      },
+    ];
+
+    fields.forEach((f) =>
+      cols.push({
         header: (props: HeaderContext<TableRecord, unknown>) => (
           <div
-            className="flex cursor-pointer items-center justify-between"
+            className="flex h-full w-full cursor-pointer items-center justify-between px-4 py-1"
             onClick={props.column.getToggleSortingHandler()}
           >
             <div className="flex items-center gap-1">
@@ -140,8 +168,8 @@ export default function Table({
             </div>
           </div>
         ),
-        accessorKey: `${f.id}.value`,
-        enableMultiSorting: true,
+        accessorKey: `f${f.id}`,
+        enableMultiSort: true,
         id: f.id.toString(),
         cell: (props: CellContext<TableRecord, unknown>) => (
           <TableCell
@@ -158,9 +186,38 @@ export default function Table({
             }
           />
         ),
-      })),
-    [fields, types],
+      }),
+    );
+
+    return cols;
+  }, [fields, types]);
+
+  const {
+    data: records,
+    fetchNextPage,
+    isFetching,
+    isPending,
+  } = api.table.getRecords.useInfiniteQuery(
+    {
+      tableId,
+      viewId,
+      limit: 50,
+    },
+
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      refetchOnWindowFocus: false,
+      placeholderData: keepPreviousData,
+    },
   );
+
+  const [data, setData] = useState<TableRecord[]>([]);
+
+  useEffect(() => {
+    if (records?.pages) {
+      setData(records.pages.flatMap((page) => page.records));
+    }
+  }, [records]);
 
   const table = useReactTable({
     columns,
@@ -190,17 +247,66 @@ export default function Table({
     enableMultiSort: true,
   });
 
-  return (
-    <div className="h-full w-full bg-neutral-200/80">
-      <table>
-        <thead>
+  const { rows } = table.getRowModel();
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    estimateSize: () => 35,
+    getScrollElement: () => tableContainerRef.current,
+    measureElement:
+      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 10,
+  });
+
+  const nextCursor = records?.pages[records.pages.length - 1]?.nextCursor;
+
+  const fetchMoreOnBottomReached = useCallback(
+    (containerRefElement?: HTMLDivElement | null) => {
+      if (containerRefElement) {
+        const { scrollHeight, scrollTop, clientHeight } = containerRefElement;
+        // once the user has scrolled within 500px of the bottom of the table, fetch more data if we can
+        if (
+          scrollHeight - scrollTop - clientHeight < 500 &&
+          !isFetching &&
+          nextCursor
+        ) {
+          fetchNextPage().catch((err) => {
+            console.log(err)
+          });
+        }
+      }
+    },
+    [fetchNextPage, isFetching, nextCursor],
+  );
+
+  // a check on mount and after a fetch to see if the table is already scrolled to the bottom and immediately needs to fetch more data
+  useEffect(() => {
+    fetchMoreOnBottomReached(tableContainerRef.current);
+  }, [fetchMoreOnBottomReached]);
+
+  return isPending ? (
+    <div className="flex h-full w-full items-center justify-center">
+      <LoadingCircle />
+    </div>
+  ) : (
+    <div
+      className="relative h-full w-full overflow-auto bg-neutral-200/80"
+      ref={tableContainerRef}
+      onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
+    >
+      <table className="grid">
+        <thead className="sticky top-0 z-1 grid">
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              <th className="border-r-1 border-neutral-300 bg-neutral-100 px-4 py-1"></th>
+            <tr key={headerGroup.id} className="flex w-full">
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="cursor-pointer border-r-1 border-neutral-300 bg-neutral-100 px-4 py-1 text-left text-sm font-light"
+                  style={{
+                    width: header.getSize(),
+                  }}
+                  className="flex border-r-1 border-b-1 border-neutral-300 bg-neutral-100 text-left text-sm font-light"
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -208,81 +314,65 @@ export default function Table({
                   )}
                 </th>
               ))}
-              <th>
+              <th className="flex">
                 <AddFieldButton createField={createField} />
               </th>
             </tr>
           ))}
         </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              <td className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white px-4 py-1 text-sm font-light">
-                {Number(row.id) + 1}
-              </td>
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light"
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-          <tr>
-            <td className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+        <tbody
+          className="relative grid"
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = rows[virtualRow.index] as Row<TableField>;
+            return (
+              <tr
+                data-index={virtualRow.index}
+                ref={(node) => rowVirtualizer.measureElement(node)}
+                key={row.id}
+                className="absolute flex w-full"
+                style={{
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    style={{
+                      width: cell.column.getSize(),
+                    }}
+                    className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot className="grid">
+          <tr className="flex">
+            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
               <AddRecordButton createRecord={() => createRecord(1, false)} />
             </td>
-            <td className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
-              <div
-                className="flex h-full w-full cursor-pointer items-center justify-center py-1 transition duration-150 hover:bg-neutral-200"
-                role="button"
-                onClick={() => createRecord(1, true)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1}
-                  stroke="currentColor"
-                  className="size-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
-                (random data)
-              </div>
+
+            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+              <AddRecordButton
+                createRecord={() => createRecord(1, true)}
+                text="(random data)"
+              />
             </td>
-            <td className="border-t-1 border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
-              <div
-                className="flex h-full w-full cursor-pointer items-center justify-center py-1 transition duration-150 hover:bg-neutral-200"
-                role="button"
-                onClick={() => createRecord(10, true)} // change to 100000 after virtualisation impemented
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1}
-                  stroke="currentColor"
-                  className="size-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
-                100k (random data)
-              </div>
+            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+              <AddRecordButton
+                createRecord={() => createRecord(100000, true)}
+                text="100k (random data)"
+              />
             </td>
           </tr>
-        </tbody>
-        <tfoot>
+
           {table.getFooterGroups().map((footerGroup) => (
             <tr key={footerGroup.id}>
               {footerGroup.headers.map((header) => (
@@ -299,6 +389,12 @@ export default function Table({
           ))}
         </tfoot>
       </table>
+      {isFetching && (
+        <div className="my-5 ml-10 flex items-center gap-2">
+          <LoadingCircle size={0.5} />
+          Fetching More...
+        </div>
+      )}
     </div>
   );
 }

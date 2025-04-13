@@ -175,8 +175,8 @@ export const tableRouter = createTRPCRouter({
       z.object({
         tableId: z.string(),
         viewId: z.string(),
-        offset: z.number().min(0).default(0),
-        size: z.number().min(1).default(100),
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.number().nullish(), // tried to integrate prisma cursors but couldnt figure out how, so just using it as an offset
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -186,32 +186,8 @@ export const tableRouter = createTRPCRouter({
 
       if (!view) throw new Error("View not found");
 
-      const records = await ctx.db.record.findMany({
-        where: {
-          tableId: input.tableId,
-          Table: {
-            Base: {
-              userId: ctx.session.user.id,
-            },
-          },
-        },
-        skip: input.offset,
-        take: input.size,
-        include: {
-          CellNumber: true,
-          CellText: true,
-        },
-      });
-
-      const recordsById = new Map(records.map((r) => [r.id, r]));
-
       const sort = (view.sort as { id: string; desc: boolean }[]) ?? [];
       const filters = (view.filters as ColumnFiltersState) ?? [];
-
-      const fields = await ctx.db.field.findMany({
-        where: { tableId: input.tableId },
-        select: { id: true, Type: true },
-      });
 
       const filterConditions = filters
         .filter((f) => f.value !== undefined)
@@ -241,12 +217,17 @@ export const tableRouter = createTRPCRouter({
           }
         });
 
-      // better to just get the vals from this one qry
-      // r.id${fields.length > 0 ? "," : ""}
-      // ${fields.map((f) => `f${f.id}.value`).join(",\n")}
+      const fields = await ctx.db.field.findMany({
+        where: { tableId: input.tableId },
+        select: { id: true, Type: true },
+      });
+
+      const limit = input.limit ?? 50;
+
       const qry = `
         select
-          r.id  
+          r.id${fields.length > 0 ? "," : ""}
+          ${fields.map((f) => `f${f.id}.value as f${f.id}`).join(",\n")}
         from "Record" r
 
         ${fields
@@ -270,27 +251,25 @@ export const tableRouter = createTRPCRouter({
           .map((s) => `f${s.id}.value ${s.desc ? "desc" : "asc"}`)
           .join(",\n")}
           ${sort.length > 0 ? "," : ""}r.id
-          ;
+          
+        limit ${limit + 1}
+        offset ${input.cursor ?? 0}
+        ;
       `;
 
-      const orderedRecords = await ctx.db.$queryRawUnsafe<
-        {
-          id: number;
-          // [key: string]: string | number | null;
-        }[]
-      >(qry);
+      const records = await ctx.db.$queryRawUnsafe<Record<string, string | number>[]>(qry);
 
-      // format the output
-      const formattedRecords = orderedRecords.map(({ id }) => {
-        const result: Record<string, unknown> = {};
-        const record = recordsById.get(id)!;
-        record.CellText.forEach((cell) => (result[cell.fieldId] = cell));
-        record.CellNumber.forEach((cell) => (result[cell.fieldId] = cell));
-        result.recordId = record.id;
-        return result;
-      });
-
-      return formattedRecords;
+      let nextCursor: typeof input.cursor | undefined = undefined;
+      if (!input.cursor) {
+        nextCursor = limit + 1;
+      } else if (records.length > limit && input.cursor) {
+        nextCursor = input.cursor + limit + 1;
+      }
+      
+      return {
+        records,
+        nextCursor,
+      };
     }),
 
   getFields: protectedProcedure

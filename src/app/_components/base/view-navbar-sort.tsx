@@ -22,7 +22,7 @@ export default function ViewNavbarSort({
     <Menu>
       <MenuButton>
         <div
-          className={`flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 ${sorting.length > 0 ? "bg-emerald-100 hover:border-1" : "hover:bg-neutral-200"}`}
+          className={`flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 ${sorting.length > 0 ? "bg-emerald-100" : "hover:bg-neutral-200"}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
