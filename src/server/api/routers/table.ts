@@ -186,8 +186,14 @@ export const tableRouter = createTRPCRouter({
 
       if (!view) throw new Error("View not found");
 
-      const sort = (view.sort as { id: string; desc: boolean }[]) ?? [];
-      const filters = (view.filters as ColumnFiltersState) ?? [];
+      let sort = (view.sort as { id: string; desc: boolean }[]) ?? [];
+      let filters = (view.filters as ColumnFiltersState) ?? [];
+      const hiddenFields = view.hiddenFields;
+
+      if (hiddenFields.length > 0) {
+        sort = sort.filter(s => !hiddenFields.includes(Number(s.id)));
+        filters = filters.filter(f => !hiddenFields.includes(Number(f.id)));
+      }
 
       const filterConditions = filters
         .filter((f) => f.value !== undefined)
@@ -216,9 +222,14 @@ export const tableRouter = createTRPCRouter({
             }
           }
         });
-
+      
       const fields = await ctx.db.field.findMany({
-        where: { tableId: input.tableId },
+        where: {
+          tableId: input.tableId,
+          id: {
+            notIn: hiddenFields.length > 0 ? hiddenFields : undefined
+          }
+        },
         select: { id: true, Type: true },
       });
 

@@ -148,4 +148,35 @@ export const viewRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  updateHiddenFields: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        hiddenFields: z.array(z.number()),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const view = await ctx.db.view.findFirst({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!view) throw new Error("Error occurred");
+
+      await ctx.db.view.update({
+        where: { id: view.id },
+        data: {
+          hiddenFields: input.hiddenFields
+        },
+      });
+
+      return { success: true };
+    }),
 });

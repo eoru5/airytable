@@ -1,12 +1,10 @@
 "use client";
 
-import type {
-  SortingState,
-  OnChangeFn,
-} from "@tanstack/react-table";
+import type { SortingState, OnChangeFn } from "@tanstack/react-table";
 import type { ColumnFiltersState, TableFields } from "./table";
 import ViewNavbarFilter from "./view-navbar-filter";
 import ViewNavbarSort from "./view-navbar-sort";
+import ViewNavbarHideFields from "./view-navbar-hide-fields";
 
 export default function ViewNavbar({
   sorting,
@@ -14,18 +12,22 @@ export default function ViewNavbar({
   fields,
   columnFilters,
   setColumnFilters,
+  hiddenFields,
+  setHiddenFields,
 }: {
   sorting: SortingState;
   setSorting: OnChangeFn<SortingState>;
   fields: TableFields;
   columnFilters: ColumnFiltersState;
   setColumnFilters: OnChangeFn<ColumnFiltersState>;
+  hiddenFields: number[],
+  setHiddenFields: OnChangeFn<number[]>,
 }) {
   return (
-    <div className="flex border-b-1 border-neutral-300 bg-white px-3 py-2 text-sm font-light gap-2">
-      <ViewNavbarSort
-        sorting={sorting}
-        setSorting={setSorting}
+    <div className="flex gap-2 border-b-1 border-neutral-300 bg-white px-3 py-2 text-sm font-light">
+      <ViewNavbarHideFields
+        hiddenFields={hiddenFields}
+        setHiddenFields={setHiddenFields}
         fields={fields}
       />
 
@@ -33,6 +35,12 @@ export default function ViewNavbar({
         fields={fields}
         columnFilters={columnFilters}
         setColumnFilters={setColumnFilters}
+      />
+
+      <ViewNavbarSort
+        sorting={sorting}
+        setSorting={setSorting}
+        fields={fields}
       />
     </div>
   );

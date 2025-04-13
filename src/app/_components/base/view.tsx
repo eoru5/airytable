@@ -53,14 +53,22 @@ export default function View({
     },
   });
 
+  const updateHiddenFields = api.view.updateHiddenFields.useMutation({
+    onSuccess: async () => {
+      await utils.table.getRecords.invalidate();
+    },
+  });
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [loaded, setLoaded] = useState(false);
+  const [hiddenFields, setHiddenFields] = useState<number[]>([]);
 
   const updateView = () => {
     const currentView = views.find((v) => v.id === viewId)!;
     setSorting((currentView.sort as { id: string; desc: boolean }[]) ?? []);
     setColumnFilters((currentView.filters as ColumnFiltersState) ?? []);
+    setHiddenFields(currentView.hiddenFields ?? []);
     setLoaded(true);
   };
 
@@ -68,17 +76,17 @@ export default function View({
 
   useEffect(() => {
     // save new filter configs to db
-    if (loaded) {
-      updateFilter.mutate({ id: viewId, filters: columnFilters });
-    }
+    if (loaded) updateFilter.mutate({ id: viewId, filters: columnFilters });
   }, [columnFilters]);
 
   useEffect(() => {
     // save new sort configs to db
-    if (loaded) {
-      updateSort.mutate({ id: viewId, sort: sorting });
-    }
+    if (loaded) updateSort.mutate({ id: viewId, sort: sorting });
   }, [sorting]);
+
+  useEffect(() => {
+    if (loaded) updateHiddenFields.mutate({ id: viewId, hiddenFields });
+  }, [hiddenFields]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-auto">
@@ -88,6 +96,8 @@ export default function View({
         fields={fields}
         columnFilters={columnFilters}
         setColumnFilters={setColumnFilters}
+        hiddenFields={hiddenFields}
+        setHiddenFields={setHiddenFields}
       />
       <div className="flex h-full w-full overflow-auto">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
@@ -162,7 +172,7 @@ export default function View({
           <Table
             tableId={tableId}
             viewId={viewId}
-            fields={fields}
+            fields={fields.filter((f) => !hiddenFields.includes(f.id))}
             createField={(name, type) =>
               createField.mutate({ tableId, name, type })
             }
