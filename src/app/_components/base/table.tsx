@@ -9,7 +9,6 @@ import {
   type CellContext,
   type ColumnDef,
   type HeaderContext,
-  type OnChangeFn,
   type Row,
   type RowData,
   type SortingState,
@@ -20,6 +19,8 @@ import React, {
   useMemo,
   useRef,
   useState,
+  type Dispatch,
+  type SetStateAction,
 } from "react";
 import { api } from "~/trpc/react";
 import TableCell from "./table-cell";
@@ -92,7 +93,7 @@ export default function Table({
   createField: (name: string, type: $Enums.fieldtype) => void;
   createRecord: (numRows: number, randomData: boolean) => void;
   sorting: SortingState;
-  setSorting: OnChangeFn<SortingState>;
+  setSorting: Dispatch<SetStateAction<SortingState>>;
 }) {
   const tableContainerRef = useRef(null);
   const types = useMemo(
@@ -224,13 +225,13 @@ export default function Table({
     data,
     getCoreRowModel: getCoreRowModel(),
     meta: {
-      updateData: (rowIndex, columnId, cell) =>
+      updateData: (rowIndex, columnId, value) =>
         setData((prev) =>
           prev.map((row, index) => {
             if (index === rowIndex) {
               return {
                 ...prev[rowIndex],
-                [columnId]: cell,
+                [`f${columnId}`]: value,
               };
             } else {
               return row;
@@ -273,7 +274,7 @@ export default function Table({
           nextCursor
         ) {
           fetchNextPage().catch((err) => {
-            console.log(err)
+            console.log(err);
           });
         }
       }

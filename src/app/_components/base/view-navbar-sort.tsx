@@ -1,13 +1,11 @@
 "use client";
 
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
-import type {
-  SortingState,
-  OnChangeFn,
-} from "@tanstack/react-table";
+import type { SortingState } from "@tanstack/react-table";
 import type { TableFields } from "./table";
 import ColumnIcon from "./column-icon";
 import SortOption from "./sort-option";
+import type { Dispatch, SetStateAction } from "react";
 
 export default function ViewNavbarSort({
   sorting,
@@ -15,7 +13,7 @@ export default function ViewNavbarSort({
   fields,
 }: {
   sorting: SortingState;
-  setSorting: OnChangeFn<SortingState>;
+  setSorting: Dispatch<SetStateAction<SortingState>>;
   fields: TableFields;
 }) {
   return (

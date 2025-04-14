@@ -7,7 +7,6 @@ import {
   MenuItem,
   Button,
 } from "@headlessui/react";
-import type { OnChangeFn } from "@tanstack/react-table";
 import {
   NumberFilters,
   TextFilters,
@@ -16,6 +15,7 @@ import {
   type TableFields,
 } from "./table";
 import FilterOption from "./filter-option";
+import type { Dispatch, SetStateAction } from "react";
 
 export default function ViewNavbarFilter({
   fields,
@@ -24,7 +24,7 @@ export default function ViewNavbarFilter({
 }: {
   fields: TableFields;
   columnFilters: ColumnFiltersState;
-  setColumnFilters: OnChangeFn<ColumnFiltersState>;
+  setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
 }) {
   // prob a better way tro do this but
   const fieldsById: Record<string, TableField> = {};

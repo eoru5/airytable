@@ -45,15 +45,34 @@ export const viewRouter = createTRPCRouter({
       return createView(ctx.db, input);
     }),
 
-  deleteView: protectedProcedure
+  delete: protectedProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // check user owns view
-      const view = await ctx.db.view.findFirst({
+      await ctx.db.view.delete({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            }
+          },
+        },
+      });
+    }),
+
+  rename: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.view.update({
         where: {
           id: input.id,
           Table: {
@@ -62,15 +81,11 @@ export const viewRouter = createTRPCRouter({
             },
           },
         },
+        data: {
+          name: input.name,
+          modifiedAt: new Date(),
+        },
       });
-
-      if (!view) throw new Error("Error occurred");
-
-      await ctx.db.view.delete({
-        where: { id: view.id },
-      });
-
-      return { success: true };
     }),
 
   updateSort: protectedProcedure
@@ -173,7 +188,7 @@ export const viewRouter = createTRPCRouter({
       await ctx.db.view.update({
         where: { id: view.id },
         data: {
-          hiddenFields: input.hiddenFields
+          hiddenFields: input.hiddenFields,
         },
       });
 

@@ -47,7 +47,7 @@ export default function TableCell({
           Number(fieldId),
         );
         // if everything checks out, update the state var
-        table.options.meta?.updateData(row.index, column.id, cell);
+        table.options.meta?.updateData(row.index, column.id, cell?.value);
       } else if (types[fieldId] === "Text") {
         const cell = await updateTextCell(
           value === "" ? null : (value as string),
@@ -55,7 +55,7 @@ export default function TableCell({
           Number(fieldId),
         );
         // if everything checks out, update the state var
-        table.options.meta?.updateData(row.index, column.id, cell);
+        table.options.meta?.updateData(row.index, column.id, cell?.value);
       }
     } catch (error) {
       console.log("Error occured, resetting value");

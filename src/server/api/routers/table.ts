@@ -121,53 +121,43 @@ export const tableRouter = createTRPCRouter({
       );
     }),
 
-  deleteTable: protectedProcedure
+  rename: protectedProcedure
     .input(
       z.object({
         id: z.string(),
+        name: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // check user owns the table
-      const table = await ctx.db.table.findFirst({
+      return ctx.db.table.update({
         where: {
           id: input.id,
           Base: {
             userId: ctx.session.user.id,
           },
         },
-        select: { id: true },
+        data: {
+          name: input.name,
+          modifiedAt: new Date(),
+        },
       });
+    }),
 
-      if (!table) throw new Error("Error occurred");
-
-      // delete everything associated with the table (cells, fields, records, views)
-      await ctx.db.cellNumber.deleteMany({
-        where: { Record: { tableId: table.id } },
-      });
-
-      await ctx.db.cellText.deleteMany({
-        where: { Record: { tableId: table.id } },
-      });
-
-      await ctx.db.field.deleteMany({
-        where: { tableId: table.id },
-      });
-
-      await ctx.db.record.deleteMany({
-        where: { tableId: table.id },
-      });
-
-      await ctx.db.view.deleteMany({
-        where: { tableId: table.id },
-      });
-
-      // finally delete the table
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
       await ctx.db.table.delete({
-        where: { id: table.id },
+        where: {
+          id: input.id,
+          Base: {
+            userId: ctx.session.user.id,
+          },
+        },
       });
-
-      return { success: true };
     }),
 
   getRecords: protectedProcedure
@@ -191,8 +181,8 @@ export const tableRouter = createTRPCRouter({
       const hiddenFields = view.hiddenFields;
 
       if (hiddenFields.length > 0) {
-        sort = sort.filter(s => !hiddenFields.includes(Number(s.id)));
-        filters = filters.filter(f => !hiddenFields.includes(Number(f.id)));
+        sort = sort.filter((s) => !hiddenFields.includes(Number(s.id)));
+        filters = filters.filter((f) => !hiddenFields.includes(Number(f.id)));
       }
 
       const filterConditions = filters
@@ -222,13 +212,13 @@ export const tableRouter = createTRPCRouter({
             }
           }
         });
-      
+
       const fields = await ctx.db.field.findMany({
         where: {
           tableId: input.tableId,
           id: {
-            notIn: hiddenFields.length > 0 ? hiddenFields : undefined
-          }
+            notIn: hiddenFields.length > 0 ? hiddenFields : undefined,
+          },
         },
         select: { id: true, Type: true },
       });
@@ -268,7 +258,8 @@ export const tableRouter = createTRPCRouter({
         ;
       `;
 
-      const records = await ctx.db.$queryRawUnsafe<Record<string, string | number>[]>(qry);
+      const records =
+        await ctx.db.$queryRawUnsafe<Record<string, string | number>[]>(qry);
 
       let nextCursor: typeof input.cursor | undefined = undefined;
       if (!input.cursor) {
@@ -276,7 +267,7 @@ export const tableRouter = createTRPCRouter({
       } else if (records.length > limit && input.cursor) {
         nextCursor = input.cursor + limit + 1;
       }
-      
+
       return {
         records,
         nextCursor,

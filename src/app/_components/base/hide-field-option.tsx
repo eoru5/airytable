@@ -2,7 +2,7 @@
 
 import { Switch } from "@headlessui/react";
 import ColumnIcon from "./column-icon";
-import type { OnChangeFn } from "@tanstack/react-table";
+import type { Dispatch, SetStateAction } from "react";
 
 export default function HideFieldOption({
   name,
@@ -15,7 +15,7 @@ export default function HideFieldOption({
   type: string;
   fieldId: number;
   hiddenFields: number[];
-  setHiddenFields: OnChangeFn<number[]>;
+  setHiddenFields: Dispatch<SetStateAction<number[]>>;
 }) {
   // enabled means column is shown, ie not filter
   const enabled = !hiddenFields.includes(fieldId);

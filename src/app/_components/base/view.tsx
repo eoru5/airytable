@@ -3,11 +3,11 @@
 import { Button } from "@headlessui/react";
 import { api } from "~/trpc/react";
 import Grid from "./grid-icon";
-import { useRouter } from "next/navigation";
 import Table, { type ColumnFiltersState } from "./table";
 import ViewNavbar from "./view-navbar";
 import { type SortingState } from "@tanstack/react-table";
 import { useState, useEffect } from "react";
+import ViewSidebarButton from "./view-sidebar-button";
 
 export default function View({
   baseId,
@@ -19,7 +19,6 @@ export default function View({
   viewId: string;
 }) {
   const utils = api.useUtils();
-  const router = useRouter();
 
   const [views] = api.table.getAllViews.useSuspenseQuery({ tableId });
   const [fields] = api.table.getFields.useSuspenseQuery({ tableId });
@@ -103,36 +102,15 @@ export default function View({
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
           <div className="flex flex-col gap-1">
             {views.map((view) => (
-              <Button
+              <ViewSidebarButton
                 key={view.id}
-                className={`flex w-full cursor-pointer items-center justify-between rounded-sm px-2 py-1 transition duration-150 ${view.id === viewId ? "bg-blue-100 hover:bg-blue-200" : "bg-white hover:bg-neutral-300"}`}
-                onClick={() => router.push(`/${baseId}/${tableId}/${view.id}`)}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="text-blue-600">
-                    <Grid />
-                  </div>
-                  {view.name}
-                </div>
-                {view.id === viewId && (
-                  <div className="text-black/50">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                      className="size-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m4.5 12.75 6 6 9-13.5"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </Button>
+                name={view.name}
+                viewId={view.id}
+                baseId={baseId}
+                selected={view.id === viewId}
+                link={`/${baseId}/${tableId}/${view.id}`}
+                canDelete={views.length > 1}
+              />
             ))}
           </div>
           <div>

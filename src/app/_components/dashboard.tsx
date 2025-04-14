@@ -25,11 +25,11 @@ export default function Dashboard() {
     },
   });
 
-  // const renameBase = api.base.rename.useMutation({
-  //   onSuccess: async () => {
-  //     await utils.base.getAll.invalidate();
-  //   }
-  // });
+  const renameBase = api.base.rename.useMutation({
+    onSuccess: async () => {
+      await utils.base.getAll.invalidate();
+    }
+  });
 
   const [bases] = api.base.getAll.useSuspenseQuery();
 
@@ -50,6 +50,7 @@ export default function Dashboard() {
                   name={base.name}
                   id={base.id}
                   key={idx}
+                  renameBase={(name) => renameBase.mutate({ id: base.id, name })}
                   deleteBase={() => deleteBase.mutate({ id: base.id })}
                 />
               ))}

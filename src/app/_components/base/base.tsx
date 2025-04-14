@@ -1,12 +1,14 @@
 "use client";
 
-import { Button } from "@headlessui/react";
+import {
+  Button,
+} from "@headlessui/react";
 
 import BaseNavbar from "./base-navbar";
 import { api } from "~/trpc/react";
 import React from "react";
-import Link from "next/link";
 import View from "./view";
+import BaseTab from "./base-tab";
 
 export default function Base({
   baseId,
@@ -42,20 +44,23 @@ export default function Base({
           <div className="flex overflow-scroll">
             {base?.Table.map(({ id, name, View }) => (
               <React.Fragment key={id}>
-                <Link
-                  className={`cursor-pointer rounded-t-sm px-4 py-2 text-sm text-nowrap ${tableId == id ? "bg-white text-black" : "text-white"} data-[hover]:${tertiaryColor} focus:outline-none data-[focus]:outline-1 data-[focus]:outline-white`}
-                  href={`/${baseId}/${id ?? 0}/${View[0]?.id ?? 0}`}
-                >
-                  {name}
-                </Link>
-                <div className="mx-3 py-2">
+                <BaseTab
+                  name={name}
+                  selected={id === tableId}
+                  link={`/${baseId}/${id ?? 0}/${View[0]?.id ?? 0}`}
+                  hoverColor={tertiaryColor}
+                  baseId={baseId}
+                  tableId={id}
+                  canDelete={base?.Table.length > 1}
+                />
+                <div className="mx-2 py-2">
                   <div className="h-full w-0.5 bg-white opacity-20" />
                 </div>
               </React.Fragment>
             ))}
 
             <Button
-              className="cursor-pointer"
+              className={`cursor-pointer rounded-t-sm px-3 text-nowrap text-white hover:${tertiaryColor} transition duration-200 focus:outline-1 focus:outline-white focus:outline-none`}
               onClick={() =>
                 createBase.mutate({
                   baseId,

@@ -68,46 +68,12 @@ export const baseRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // get all the tables and flatten
-      const tables = await ctx.db.table.findMany({
-        where: {
-          baseId: input.id,
-          Base: { userId: ctx.session.user.id },
-        },
-        select: { id: true },
-      });
-
-      const tableIds = tables.map((t) => t.id);
-
-      // delete everything associated with base tables (cells, fields, records, views)
-      await ctx.db.cellNumber.deleteMany({
-        where: { Record: { tableId: { in: tableIds } } },
-      });
-      await ctx.db.cellText.deleteMany({
-        where: { Record: { tableId: { in: tableIds } } },
-      });
-
-      await ctx.db.field.deleteMany({ where: { tableId: { in: tableIds } } });
-      await ctx.db.record.deleteMany({ where: { tableId: { in: tableIds } } });
-      await ctx.db.view.deleteMany({ where: { tableId: { in: tableIds } } });
-
-      // delete tables
-      await ctx.db.table.deleteMany({
-        where: { id: { in: tableIds } },
-      });
-
-      // finally delete the base
-      const deleted = await ctx.db.base.deleteMany({
+      await ctx.db.base.delete({
         where: {
           id: input.id,
           userId: ctx.session.user.id,
         },
       });
-
-      if (deleted.count === 0) {
-        throw new Error("Error occurred, no base deleted");
-      }
-      return { success: true };
     }),
 
   rename: protectedProcedure

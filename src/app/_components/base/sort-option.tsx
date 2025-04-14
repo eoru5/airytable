@@ -5,8 +5,8 @@ import {
   ListboxOption,
   ListboxOptions,
 } from "@headlessui/react";
-import type { SortingState, OnChangeFn } from "@tanstack/react-table";
-import { useState } from "react";
+import type { SortingState } from "@tanstack/react-table";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import type { TableField, TableFields } from "./table";
 
 export default function SortOption({
@@ -17,7 +17,7 @@ export default function SortOption({
 }: {
   selectedField: TableField | null;
   sorting: SortingState;
-  setSorting: OnChangeFn<SortingState>;
+  setSorting: Dispatch<SetStateAction<SortingState>>;
   fields: TableFields;
 }) {
   const [selected, setSelected] = useState(selectedField);

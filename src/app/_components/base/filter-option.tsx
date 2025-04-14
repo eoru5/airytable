@@ -5,8 +5,7 @@ import {
   ListboxOption,
   ListboxOptions,
 } from "@headlessui/react";
-import type { OnChangeFn } from "@tanstack/react-table";
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import {
   NumberFilters,
   numberFilters,
@@ -28,7 +27,7 @@ export default function FilterOption({
   fieldIdx: number;
   fields: TableFields;
   columnFilters: ColumnFiltersState;
-  setColumnFilters: OnChangeFn<ColumnFiltersState>;
+  setColumnFilters: Dispatch<SetStateAction<ColumnFiltersState>>;
 }) {
   const selectedField = fields.find(
     (f) => f.id.toString() === selectedFilter.id,

@@ -1,9 +1,9 @@
 "use client";
 
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
-import type { OnChangeFn } from "@tanstack/react-table";
 import type { TableFields } from "./table";
 import HideFieldOption from "./hide-field-option";
+import type { Dispatch, SetStateAction } from "react";
 
 export default function ViewNavbarHideFields({
   hiddenFields,
@@ -11,7 +11,7 @@ export default function ViewNavbarHideFields({
   fields,
 }: {
   hiddenFields: number[];
-  setHiddenFields: OnChangeFn<number[]>;
+  setHiddenFields: Dispatch<SetStateAction<number[]>>;
   fields: TableFields;
 }) {
   return (
