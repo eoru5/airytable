@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { base, table } = await api.base.open({ baseId, tableId, viewId });
 
   return {
-    title: `${base.name}: ${table.name} - Airtable`,
+    title: `${base.name}: ${table.name} - Airytable`,
   };
 }
 

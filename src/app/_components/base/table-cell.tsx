@@ -14,6 +14,8 @@ export default function TableCell({
   types,
   updateNumberCell,
   updateTextCell,
+  highlight,
+  highlightDark,
 }: {
   getValue: Getter<unknown>;
   row: Row<TableRecord>;
@@ -25,12 +27,13 @@ export default function TableCell({
     recordId: number,
     fieldId: number,
   ) => Promise<inferRouterOutputs<AppRouter>["cell"]["updateNumber"]>;
-
   updateTextCell: (
     value: string | null,
     recordId: number,
     fieldId: number,
   ) => Promise<inferRouterOutputs<AppRouter>["cell"]["updateText"]>;
+  highlight: boolean;
+  highlightDark: boolean;
 }) {
   const initialValue = row.original[`f${column.id}`] ? getValue() : "";
 
@@ -70,7 +73,7 @@ export default function TableCell({
 
   return (
     <input
-      className="h-full w-full px-4 py-1"
+      className={`h-full w-full px-4 py-1 ${highlightDark && highlight ? 'bg-yellow-200' : ''} ${highlight && !highlightDark ? 'bg-yellow-100' : ''}`}
       value={value as string}
       onChange={(e) => {
         if (

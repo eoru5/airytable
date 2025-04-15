@@ -28,7 +28,7 @@ import AddFieldButton from "./add-field-button";
 import ColumnIcon from "./column-icon";
 import AddRecordButton from "./add-record-button";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import LoadingCircle from "../loading-circle";
 
 declare module "@tanstack/react-table" {
@@ -86,6 +86,8 @@ export default function Table({
   createRecord,
   sorting,
   setSorting,
+  searching,
+  setSearching,
 }: {
   tableId: string;
   viewId: string;
@@ -94,6 +96,8 @@ export default function Table({
   createRecord: (numRows: number, randomData: boolean) => void;
   sorting: SortingState;
   setSorting: Dispatch<SetStateAction<SortingState>>;
+  searching: boolean;
+  setSearching: Dispatch<SetStateAction<boolean>>;
 }) {
   const tableContainerRef = useRef(null);
   const types = useMemo(
@@ -106,6 +110,10 @@ export default function Table({
   const updateTextCell = api.cell.updateText.useMutation();
 
   const columnHelper = createColumnHelper<TableRecord>();
+
+  const [searchPos, setSearchPos] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+
   const columns = useMemo(() => {
     const cols: ColumnDef<TableRecord, unknown>[] = [
       {
@@ -172,26 +180,49 @@ export default function Table({
         accessorKey: `f${f.id}`,
         enableMultiSort: true,
         id: f.id.toString(),
-        cell: (props: CellContext<TableRecord, unknown>) => (
-          <TableCell
-            getValue={props.getValue}
-            row={props.row}
-            column={props.column}
-            table={props.table}
-            types={types}
-            updateNumberCell={(value, recordId, fieldId) =>
-              updateNumberCell.mutateAsync({ fieldId, recordId, value })
-            }
-            updateTextCell={(value, recordId, fieldId) =>
-              updateTextCell.mutateAsync({ fieldId, recordId, value })
-            }
-          />
-        ),
+        cell: (props: CellContext<TableRecord, unknown>) => {
+          if (searchPos !== null) {
+            console.log(
+              props.getValue(),
+              searchResults[searchPos],
+              searchPos,
+              props.row.original.id,
+              props.column.id,
+              searchResults[searchPos]?.rId === props.row.original.id &&
+                searchResults[searchPos]?.fId.toString() === props.column.id,
+            );
+          }
+          return (
+            <TableCell
+              getValue={props.getValue}
+              row={props.row}
+              column={props.column}
+              table={props.table}
+              types={types}
+              updateNumberCell={(value, recordId, fieldId) =>
+                updateNumberCell.mutateAsync({ fieldId, recordId, value })
+              }
+              updateTextCell={(value, recordId, fieldId) =>
+                updateTextCell.mutateAsync({ fieldId, recordId, value })
+              }
+              highlight={
+                searchPos !== null &&
+                String(props.getValue() || "").includes(search)
+              }
+              highlightDark={
+                searchPos === null
+                  ? false
+                  : searchResults[searchPos]?.rId === props.row.original.id &&
+                    searchResults[searchPos]?.fId.toString() === props.column.id
+              }
+            />
+          );
+        },
       }),
     );
 
     return cols;
-  }, [fields, types]);
+  }, [fields, types, search, searchPos]);
 
   const {
     data: records,
@@ -204,7 +235,6 @@ export default function Table({
       viewId,
       limit: 50,
     },
-
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnWindowFocus: false,
@@ -287,115 +317,291 @@ export default function Table({
     fetchMoreOnBottomReached(tableContainerRef.current);
   }, [fetchMoreOnBottomReached]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (searching && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [searching]);
+
+  const {
+    data: searchData,
+    refetch,
+    isPending: searchIsPending,
+  } = api.table.search.useQuery(
+    { tableId, viewId, search },
+    { enabled: false },
+  );
+
+  const [searchResults, setSearchResults] = useState<
+    { rIdx: number; rId: number; fId: number }[]
+  >([]);
+
+  useEffect(() => {
+    if (searchPos !== null && !!table.getRowModel().rows.length) {
+      const r = searchResults[searchPos];
+      if (!r) return;
+
+      if (r.rIdx > data.length - 1) {
+        // setLimit(r.rIdx - data.length - 1);
+        return;
+      }
+
+      // find idx of row in data
+      const idx = data.findIndex((row) => Number(row.id) === r.rId);
+      if (idx !== -1) {
+        const virtualItems = rowVirtualizer.getVirtualItems();
+        const firstVisible = virtualItems[0]?.index;
+        const lastVisible = virtualItems[virtualItems.length - 1]?.index;
+
+        if (idx < (firstVisible ?? -1) || idx > (lastVisible ?? -1)) {
+          rowVirtualizer.scrollToIndex?.(idx, { align: "start" });
+        }
+      }
+    }
+  }, [searchPos]);
+
+  useEffect(() => {
+    if (search !== "") {
+      setSearchResults([]);
+      refetch().then(({ data }) => {
+        // need to use the latest search string
+        if (data?.search === search) {
+          setSearchPos(0);
+          setSearchResults(data.results);
+        }
+      });
+    }
+  }, [search]);
+
+  window.addEventListener("keydown", function (e) {
+    if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+      e.preventDefault();
+      setSearching(true);
+    }
+  });
+
   return isPending ? (
     <div className="flex h-full w-full items-center justify-center">
       <LoadingCircle />
     </div>
   ) : (
-    <div
-      className="relative h-full w-full overflow-auto bg-neutral-200/80"
-      ref={tableContainerRef}
-      onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
-    >
-      <table className="grid">
-        <thead className="sticky top-0 z-1 grid">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} className="flex w-full">
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  style={{
-                    width: header.getSize(),
-                  }}
-                  className="flex border-r-1 border-b-1 border-neutral-300 bg-neutral-100 text-left text-sm font-light"
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </th>
-              ))}
-              <th className="flex">
-                <AddFieldButton createField={createField} />
-              </th>
-            </tr>
-          ))}
-        </thead>
-        <tbody
-          className="relative grid"
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = rows[virtualRow.index] as Row<TableField>;
-            return (
-              <tr
-                data-index={virtualRow.index}
-                ref={(node) => rowVirtualizer.measureElement(node)}
-                key={row.id}
-                className="absolute flex w-full"
-                style={{
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    style={{
-                      width: cell.column.getSize(),
-                    }}
-                    className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light"
+    <div className="relative h-full w-full overflow-auto bg-neutral-200/80">
+      {searching && (
+        <div className="absolute top-0 right-0 z-20 mr-4 flex w-[300px] flex-col border-1 border-t-0 border-neutral-300 bg-white text-sm font-light select-none">
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+            <input
+              className="w-0 flex-1 px-2 py-1 outline-none"
+              placeholder="Find in view"
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <div className="flex items-center justify-end gap-2 text-neutral-500">
+              {search !== "" &&
+                (!searchIsPending ? (
+                  <div className="max-w-[50px] overflow-hidden text-xs tracking-tight text-nowrap text-ellipsis">
+                    {searchPos !== null ? searchPos + 1 : 0} of{" "}
+                    {searchResults.length}
+                  </div>
+                ) : (
+                  <svg
+                    width="13.5"
+                    height="13.5"
+                    viewBox="0 0 54 54"
+                    style={{ shapeRendering: "geometricPrecision" }}
+                    fill="currentColor"
+                    className="animate-spin-scale"
+                    data-testid="loading-spinner"
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                    <path d="M10.9,48.6c-1.6-1.3-2-3.6-0.7-5.3c1.3-1.6,3.6-2.1,5.3-0.8c0.8,0.5,1.5,1.1,2.4,1.5c7.5,4.1,16.8,2.7,22.8-3.4c1.5-1.5,3.8-1.5,5.3,0c1.4,1.5,1.4,3.9,0,5.3c-8.4,8.5-21.4,10.6-31.8,4.8C13,50.1,11.9,49.3,10.9,48.6z" />
+                    <path d="M53.6,31.4c-0.3,2.1-2.3,3.5-4.4,3.2c-2.1-0.3-3.4-2.3-3.1-4.4c0.2-1.1,0.2-2.2,0.2-3.3c0-8.7-5.7-16.2-13.7-18.5c-2-0.5-3.2-2.7-2.6-4.7s2.6-3.2,4.7-2.6C46,4.4,53.9,14.9,53.9,27C53.9,28.5,53.8,30,53.6,31.4z" />
+                    <path d="M16.7,1.9c1.9-0.8,4.1,0.2,4.8,2.2s-0.2,4.2-2.1,5c-7.2,2.9-12,10-12,18.1c0,1.6,0.2,3.2,0.6,4.7c0.5,2-0.7,4.1-2.7,4.6c-2,0.5-4-0.7-4.5-2.8C0.3,31.5,0,29.3,0,27.1C0,15.8,6.7,5.9,16.7,1.9z" />
+                  </svg>
                 ))}
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot className="grid">
-          <tr className="flex">
-            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
-              <AddRecordButton createRecord={() => createRecord(1, false)} />
-            </td>
 
-            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
-              <AddRecordButton
-                createRecord={() => createRecord(1, true)}
-                text="(random data)"
-              />
-            </td>
-            <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
-              <AddRecordButton
-                createRecord={() => createRecord(100000, true)}
-                text="100k (random data)"
-              />
-            </td>
-          </tr>
+              {search !== "" &&
+                !searchIsPending &&
+                searchResults.length > 0 &&
+                searchPos !== null && (
+                  <div className="flex">
+                    <div
+                      className="cursor-pointer rounded-l-sm transition duration-200 hover:bg-neutral-200"
+                      role="button"
+                      onClick={() =>
+                        setSearchPos((searchPos + 1) % searchResults.length)
+                      }
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="size-5"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div
+                      className="cursor-pointer rounded-r-sm transition duration-200 hover:bg-neutral-200"
+                      role="button"
+                      onClick={() =>
+                        setSearchPos(
+                          (searchPos - 1 + searchResults.length) %
+                            searchResults.length,
+                        )
+                      }
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="size-5"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                )}
 
-          {table.getFooterGroups().map((footerGroup) => (
-            <tr key={footerGroup.id}>
-              {footerGroup.headers.map((header) => (
-                <th key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.footer,
-                        header.getContext(),
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </tfoot>
-      </table>
-      {isFetching && (
-        <div className="my-5 ml-10 flex items-center gap-2">
-          <LoadingCircle size={0.5} />
-          Fetching More...
+              <div
+                className="cursor-pointer transition duration-200 hover:text-black"
+                role="button"
+                onClick={() => setSearching(false)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  className="size-5"
+                >
+                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="bg-neutral-100 px-4 py-2.5 text-xs font-light">
+            {search !== "" && searchResults.length > 0
+              ? `Found ${searchResults.length} cells`
+              : "Enter search term above"}
+          </div>
         </div>
       )}
+      <div
+        className="relative h-full w-full overflow-auto bg-neutral-200/80"
+        ref={tableContainerRef}
+        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
+      >
+        <table className="grid">
+          <thead className="sticky top-0 z-1 grid">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} className="flex w-full">
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    style={{
+                      width: header.getSize(),
+                    }}
+                    className="flex border-r-1 border-b-1 border-neutral-300 bg-neutral-100 text-left text-sm font-light"
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </th>
+                ))}
+                <th className="flex">
+                  <AddFieldButton createField={createField} />
+                </th>
+              </tr>
+            ))}
+          </thead>
+          <tbody
+            className="relative grid"
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = rows[virtualRow.index] as Row<TableField>;
+              return (
+                <tr
+                  data-index={virtualRow.index}
+                  ref={(node) => rowVirtualizer.measureElement(node)}
+                  key={row.id}
+                  className="absolute flex w-full"
+                  style={{
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      style={{
+                        width: cell.column.getSize(),
+                      }}
+                      className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light"
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="grid">
+            <tr className="flex">
+              <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+                <AddRecordButton createRecord={() => createRecord(1, false)} />
+              </td>
+
+              <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+                <AddRecordButton
+                  createRecord={() => createRecord(1, true)}
+                  text="(random data)"
+                />
+              </td>
+              <td className="flex border-r-1 border-b-1 border-neutral-300 bg-white text-sm font-light">
+                <AddRecordButton
+                  createRecord={() => createRecord(100000, true)}
+                  text="100k (random data)"
+                />
+              </td>
+            </tr>
+
+            {table.getFooterGroups().map((footerGroup) => (
+              <tr key={footerGroup.id}>
+                {footerGroup.headers.map((header) => (
+                  <th key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.footer,
+                          header.getContext(),
+                        )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </tfoot>
+        </table>
+        {isFetching && (
+          <div className="my-5 ml-10 flex items-center gap-2">
+            <LoadingCircle size={0.5} />
+            Fetching More...
+          </div>
+        )}
+      </div>
     </div>
   );
 }

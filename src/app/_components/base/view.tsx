@@ -62,6 +62,7 @@ export default function View({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [loaded, setLoaded] = useState(false);
   const [hiddenFields, setHiddenFields] = useState<number[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const updateView = () => {
     const currentView = views.find((v) => v.id === viewId)!;
@@ -97,6 +98,8 @@ export default function View({
         setColumnFilters={setColumnFilters}
         hiddenFields={hiddenFields}
         setHiddenFields={setHiddenFields}
+        searching={searching}
+        setSearching={setSearching}
       />
       <div className="flex h-full w-full overflow-auto">
         <div className="flex h-full w-[300px] flex-col justify-between border-r-1 border-neutral-300 bg-white px-4 py-4 text-sm font-light">
@@ -159,6 +162,8 @@ export default function View({
             }
             sorting={sorting}
             setSorting={setSorting}
+            searching={searching}
+            setSearching={setSearching}
           />
         </div>
       </div>
