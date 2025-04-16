@@ -2,7 +2,6 @@
 
 import type { $Enums } from "@prisma/client";
 import {
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -109,8 +108,6 @@ export default function Table({
   const updateNumberCell = api.cell.updateNumber.useMutation();
   const updateTextCell = api.cell.updateText.useMutation();
 
-  const columnHelper = createColumnHelper<TableRecord>();
-
   const [searchPos, setSearchPos] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<
@@ -125,13 +122,7 @@ export default function Table({
         enableSorting: false,
         cell: (props: CellContext<TableRecord, unknown>) => (
           <TableNumberCell
-            index={
-              (table
-                .getSortedRowModel()
-                ?.flatRows?.findIndex(
-                  (flatRow) => flatRow.id === props.row.id,
-                ) || 0) + 1
-            }
+            index={props.row.index + 1}
             recordId={props.row.original.id as number}
           />
         ),
@@ -316,7 +307,6 @@ export default function Table({
           if (data?.search === search) {
             setSearchPos(0);
             setSearchResults(data.results);
-            console.log(data.results);
           }
         })
         .catch((err) => console.log(err));
@@ -357,35 +347,46 @@ export default function Table({
   }, [searching, inputRef, search, searchResults, searchPos]);
 
   // make sure we have the data before actually setting it
-  const changeSearchPos = (pos: number) => {
-    const r = searchResults[pos];
-    if (!r) return;
-    if (r.rIdx > data.length - 1) {
-      utils.table.getRecords
-        .fetch({
-          tableId,
-          viewId,
-          limit: r.rIdx - data.length,
-          cursor: nextCursor,
-        })
-        .then((newData) => {
-          utils.table.getRecords.setInfiniteData(
-            { tableId, viewId, limit: 50 },
-            (oldData) => ({
-              pages: [...(oldData?.pages ?? []), newData],
-              pageParams: [
-                ...(oldData?.pageParams ?? []),
-                newData.nextCursor ?? null,
-              ],
-            }),
-          );
-          setSearchPos(pos);
-        })
-        .catch((err) => console.log(err));
-    } else {
-      setSearchPos(pos);
-    }
-  };
+  const changeSearchPos = useCallback(
+    (pos: number) => {
+      const r = searchResults[pos];
+      if (!r) return;
+      if (r.rIdx > data.length - 1) {
+        utils.table.getRecords
+          .fetch({
+            tableId,
+            viewId,
+            limit: r.rIdx - data.length,
+            cursor: nextCursor,
+          })
+          .then((newData) => {
+            utils.table.getRecords.setInfiniteData(
+              { tableId, viewId, limit: 50 },
+              (oldData) => ({
+                pages: [...(oldData?.pages ?? []), newData],
+                pageParams: [
+                  ...(oldData?.pageParams ?? []),
+                  newData.nextCursor ?? null,
+                ],
+              }),
+            );
+            setSearchPos(pos);
+          })
+          .catch((err) => console.log(err));
+      } else {
+        setSearchPos(pos);
+      }
+    },
+    [
+      searchResults,
+      data.length,
+      nextCursor,
+      setSearchPos,
+      tableId,
+      viewId,
+      utils.table.getRecords,
+    ],
+  );
 
   return isPending ? (
     <div className="flex h-full w-full items-center justify-center">
