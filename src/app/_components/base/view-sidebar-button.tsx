@@ -100,7 +100,7 @@ export default function ViewSidebarButton({
         className="z-10 mt-2 w-[250px] origin-top-right rounded-sm bg-white px-1 py-2 text-sm font-light shadow-sm transition duration-100 ease-out focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0"
       >
         <MenuItem>
-          <RenameButton text="Rename Base" onClick={() => setRenaming(true)} />
+          <RenameButton text="Rename View" onClick={() => setRenaming(true)} />
         </MenuItem>
         <MenuItem>
           {canDelete ? (

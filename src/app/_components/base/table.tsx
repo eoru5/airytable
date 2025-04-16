@@ -30,6 +30,13 @@ import AddRecordButton from "./add-record-button";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import LoadingCircle from "../loading-circle";
+import { createQueryClient } from "~/trpc/query-client";
+import { getQueryKey } from "@trpc/react-query";
+import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
+import DeleteButton from "../delete-button";
+import RenameButton from "../rename-button";
+import TableHeader from "./table-header";
+import TableNumberCell from "./table-number-cell";
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
@@ -113,6 +120,9 @@ export default function Table({
 
   const [searchPos, setSearchPos] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<
+    { rIdx: number; rId: number; fId: number }[]
+  >([]);
 
   const columns = useMemo(() => {
     const cols: ColumnDef<TableRecord, unknown>[] = [
@@ -121,12 +131,16 @@ export default function Table({
         id: "id",
         enableSorting: false,
         cell: (props: CellContext<TableRecord, unknown>) => (
-          <div className="h-full w-full px-4 py-1">
-            {(table
-              .getSortedRowModel()
-              ?.flatRows?.findIndex((flatRow) => flatRow.id === props.row.id) ||
-              0) + 1}
-          </div>
+          <TableNumberCell
+            index={
+              (table
+                .getSortedRowModel()
+                ?.flatRows?.findIndex(
+                  (flatRow) => flatRow.id === props.row.id,
+                ) || 0) + 1
+            }
+            recordId={props.row.original.id as number}
+          />
         ),
       },
     ];
@@ -134,95 +148,43 @@ export default function Table({
     fields.forEach((f) =>
       cols.push({
         header: (props: HeaderContext<TableRecord, unknown>) => (
-          <div
-            className="flex h-full w-full cursor-pointer items-center justify-between px-4 py-1"
-            onClick={props.column.getToggleSortingHandler()}
-          >
-            <div className="flex items-center gap-1">
-              <div className="text-neutral-500">
-                <ColumnIcon type={f.Type} />
-              </div>
-              {f.name}
-            </div>
-
-            <div className="text-neutral-600">
-              {props.column.getIsSorted() === "asc" && (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="size-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-              {props.column.getIsSorted() === "desc" && (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="size-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </div>
-          </div>
+          <TableHeader props={props} field={f} />
         ),
         accessorKey: `f${f.id}`,
         enableMultiSort: true,
         id: f.id.toString(),
-        cell: (props: CellContext<TableRecord, unknown>) => {
-          if (searchPos !== null) {
-            console.log(
-              props.getValue(),
-              searchResults[searchPos],
-              searchPos,
-              props.row.original.id,
-              props.column.id,
-              searchResults[searchPos]?.rId === props.row.original.id &&
-                searchResults[searchPos]?.fId.toString() === props.column.id,
-            );
-          }
-          return (
-            <TableCell
-              getValue={props.getValue}
-              row={props.row}
-              column={props.column}
-              table={props.table}
-              types={types}
-              updateNumberCell={(value, recordId, fieldId) =>
-                updateNumberCell.mutateAsync({ fieldId, recordId, value })
-              }
-              updateTextCell={(value, recordId, fieldId) =>
-                updateTextCell.mutateAsync({ fieldId, recordId, value })
-              }
-              highlight={
-                searchPos !== null &&
-                String(props.getValue() || "").includes(search)
-              }
-              highlightDark={
-                searchPos === null
-                  ? false
-                  : searchResults[searchPos]?.rId === props.row.original.id &&
-                    searchResults[searchPos]?.fId.toString() === props.column.id
-              }
-            />
-          );
-        },
+        cell: (props: CellContext<TableRecord, unknown>) => (
+          <TableCell
+            getValue={props.getValue}
+            row={props.row}
+            column={props.column}
+            table={props.table}
+            types={types}
+            updateNumberCell={(value, recordId, fieldId) =>
+              updateNumberCell.mutateAsync({ fieldId, recordId, value })
+            }
+            updateTextCell={(value, recordId, fieldId) =>
+              updateTextCell.mutateAsync({ fieldId, recordId, value })
+            }
+            highlight={
+              searchPos !== null &&
+              search !== "" &&
+              searchResults.length > 0 &&
+              String(props.getValue() || "").includes(search)
+            }
+            highlightDark={
+              searchPos === null
+                ? false
+                : searchResults[searchPos]?.rId === props.row.original.id &&
+                  searchResults[searchPos]?.fId.toString() === props.column.id
+            }
+          />
+        ),
       }),
     );
 
     return cols;
-  }, [fields, types, search, searchPos]);
+  }, [fields, types, search, searchResults, searchPos]);
 
   const {
     data: records,
@@ -241,6 +203,8 @@ export default function Table({
       placeholderData: keepPreviousData,
     },
   );
+
+  const utils = api.useUtils();
 
   const [data, setData] = useState<TableRecord[]>([]);
 
@@ -321,6 +285,9 @@ export default function Table({
   useEffect(() => {
     if (searching && inputRef.current) {
       inputRef.current.focus();
+    } else {
+      setSearchResults([]);
+      setSearchPos(null);
     }
   }, [searching]);
 
@@ -333,21 +300,10 @@ export default function Table({
     { enabled: false },
   );
 
-  const [searchResults, setSearchResults] = useState<
-    { rIdx: number; rId: number; fId: number }[]
-  >([]);
-
   useEffect(() => {
     if (searchPos !== null && !!table.getRowModel().rows.length) {
       const r = searchResults[searchPos];
       if (!r) return;
-
-      if (r.rIdx > data.length - 1) {
-        // setLimit(r.rIdx - data.length - 1);
-        return;
-      }
-
-      // find idx of row in data
       const idx = data.findIndex((row) => Number(row.id) === r.rId);
       if (idx !== -1) {
         const virtualItems = rowVirtualizer.getVirtualItems();
@@ -359,7 +315,7 @@ export default function Table({
         }
       }
     }
-  }, [searchPos]);
+  }, [searchPos, data]);
 
   useEffect(() => {
     if (search !== "") {
@@ -369,17 +325,68 @@ export default function Table({
         if (data?.search === search) {
           setSearchPos(0);
           setSearchResults(data.results);
+          console.log(data.results);
         }
       });
     }
   }, [search]);
 
-  window.addEventListener("keydown", function (e) {
-    if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
-      e.preventDefault();
-      setSearching(true);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F4" || (e.ctrlKey && e.key === "f")) {
+        e.preventDefault();
+        if (searching) {
+          inputRef?.current?.focus();
+        } else {
+          setSearching(true);
+        }
+      }
+      if (e.key === "Escape" && searching) {
+        e.preventDefault();
+        setSearching(false);
+      }
+      if (
+        e.key === "Enter" &&
+        search !== "" &&
+        searchResults.length > 0 &&
+        searchPos !== null
+      ) {
+        changeSearchPos((searchPos + 1) % searchResults.length);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [searching, inputRef, search, searchResults, searchPos]);
+
+  // make sure we have the data before actually setting it
+  const changeSearchPos = (pos: number) => {
+    const r = searchResults[pos];
+    if (!r) return;
+    if (r.rIdx > data.length - 1) {
+      utils.table.getRecords
+        .fetch({
+          tableId,
+          viewId,
+          limit: r.rIdx - data.length,
+          cursor: nextCursor,
+        })
+        .then((newData) => {
+          utils.table.getRecords.setInfiniteData(
+            { tableId, viewId, limit: 50 },
+            (oldData) => ({
+              pages: [...(oldData?.pages ?? []), newData],
+              pageParams: [
+                ...(oldData?.pageParams ?? []),
+                newData.nextCursor ?? null,
+              ],
+            }),
+          );
+          setSearchPos(pos);
+        });
+    } else {
+      setSearchPos(pos);
     }
-  });
+  };
 
   return isPending ? (
     <div className="flex h-full w-full items-center justify-center">
@@ -400,9 +407,30 @@ export default function Table({
             <div className="flex items-center justify-end gap-2 text-neutral-500">
               {search !== "" &&
                 (!searchIsPending ? (
-                  <div className="max-w-[50px] overflow-hidden text-xs tracking-tight text-nowrap text-ellipsis">
-                    {searchPos !== null ? searchPos + 1 : 0} of{" "}
-                    {searchResults.length}
+                  <div className="flex items-center gap-0.5">
+                    {searchPos !== null &&
+                      (searchResults[searchPos]?.rIdx ?? 0) >
+                        data.length - 1 && (
+                        <svg
+                          width="13.5"
+                          height="13.5"
+                          viewBox="0 0 54 54"
+                          style={{ shapeRendering: "geometricPrecision" }}
+                          fill="currentColor"
+                          className="animate-spin-scale"
+                          data-testid="loading-spinner"
+                        >
+                          <path d="M10.9,48.6c-1.6-1.3-2-3.6-0.7-5.3c1.3-1.6,3.6-2.1,5.3-0.8c0.8,0.5,1.5,1.1,2.4,1.5c7.5,4.1,16.8,2.7,22.8-3.4c1.5-1.5,3.8-1.5,5.3,0c1.4,1.5,1.4,3.9,0,5.3c-8.4,8.5-21.4,10.6-31.8,4.8C13,50.1,11.9,49.3,10.9,48.6z" />
+                          <path d="M53.6,31.4c-0.3,2.1-2.3,3.5-4.4,3.2c-2.1-0.3-3.4-2.3-3.1-4.4c0.2-1.1,0.2-2.2,0.2-3.3c0-8.7-5.7-16.2-13.7-18.5c-2-0.5-3.2-2.7-2.6-4.7s2.6-3.2,4.7-2.6C46,4.4,53.9,14.9,53.9,27C53.9,28.5,53.8,30,53.6,31.4z" />
+                          <path d="M16.7,1.9c1.9-0.8,4.1,0.2,4.8,2.2s-0.2,4.2-2.1,5c-7.2,2.9-12,10-12,18.1c0,1.6,0.2,3.2,0.6,4.7c0.5,2-0.7,4.1-2.7,4.6c-2,0.5-4-0.7-4.5-2.8C0.3,31.5,0,29.3,0,27.1C0,15.8,6.7,5.9,16.7,1.9z" />
+                        </svg>
+                      )}
+                    <div className="max-w-[50px] overflow-hidden text-xs tracking-tight text-nowrap text-ellipsis">
+                      {searchPos !== null && searchResults.length > 0
+                        ? searchPos + 1
+                        : 0}{" "}
+                      of {searchResults.length}
+                    </div>
                   </div>
                 ) : (
                   <svg
@@ -429,7 +457,7 @@ export default function Table({
                       className="cursor-pointer rounded-l-sm transition duration-200 hover:bg-neutral-200"
                       role="button"
                       onClick={() =>
-                        setSearchPos((searchPos + 1) % searchResults.length)
+                        changeSearchPos((searchPos + 1) % searchResults.length)
                       }
                     >
                       <svg
@@ -449,7 +477,7 @@ export default function Table({
                       className="cursor-pointer rounded-r-sm transition duration-200 hover:bg-neutral-200"
                       role="button"
                       onClick={() =>
-                        setSearchPos(
+                        changeSearchPos(
                           (searchPos - 1 + searchResults.length) %
                             searchResults.length,
                         )

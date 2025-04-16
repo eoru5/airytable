@@ -75,4 +75,23 @@ export const recordRouter = createTRPCRouter({
         input.randomData,
       );
     }),
+
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.record.delete({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+    }),
 });

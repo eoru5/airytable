@@ -19,4 +19,46 @@ export const fieldRouter = createTRPCRouter({
         data: { tableId: input.tableId, name: input.name, Type: input.type },
       });
     }),
+
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.field.delete({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+    }),
+
+  rename: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.field.update({
+        where: {
+          id: input.id,
+          Table: {
+            Base: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        data: {
+          name: input.name,
+        },
+      });
+    }),
 });

@@ -225,6 +225,8 @@ export const tableRouter = createTRPCRouter({
 
       const limit = input.limit ?? 50;
 
+      sort = sort.filter(s => fields.findIndex(f => f.id.toString() === s.id) !== -1)
+
       const qry = `
         select
           r.id${fields.length > 0 ? "," : ""}
@@ -357,10 +359,20 @@ export const tableRouter = createTRPCRouter({
         select: { id: true, Type: true },
       });
 
+      sort = sort.filter(s => fields.findIndex(f => f.id.toString() === s.id) !== -1)
+
       const qry = `
         select
           r.id${fields.length > 0 ? "," : ""}
-          ${fields.map((f) => `f${f.id}.value as f${f.id}`).join(",\n")}
+          ${fields.map((f) => `
+            case
+              when f${f.id}.value::text ilike '%${input.search}%' 
+                then f${f.id}.value 
+              else null
+            end as f${f.id}
+        `,
+      )
+      .join(",\n")}
         from "Record" r
 
         ${fields
@@ -371,7 +383,6 @@ export const tableRouter = createTRPCRouter({
                 select "recordId", value
                 from "${f.Type === "Text" ? "CellText" : "CellNumber"}"
                 where "fieldId" = ${f.id}
-                and "value"::text like '%${input.search}%'
               ) as f${f.id} on f${f.id}."recordId" = r.id
             `,
           )
@@ -379,7 +390,7 @@ export const tableRouter = createTRPCRouter({
 
         where r."tableId" = '${input.tableId}'
         ${filterConditions.length > 0 ? "\nand " + filterConditions.join("and\n") : ""}
-
+        
         order by
         ${sort
           .map((s) => `f${s.id}.value ${s.desc ? "desc" : "asc"}`)
@@ -390,16 +401,20 @@ export const tableRouter = createTRPCRouter({
 
       const records =
         await ctx.db.$queryRawUnsafe<Record<string, string | number>[]>(qry);
-        
-      const results: {rIdx: number, rId: number, fId: number}[] = [];
+
+      const results: { rIdx: number; rId: number; fId: number }[] = [];
       for (const [idx, r] of records.entries()) {
         for (const f of fields) {
           if (r[`f${f.id}`]) {
-            results.push({rIdx: idx, rId: r.id !== undefined ? Number(r.id) : -1, fId: f.id})
+            results.push({
+              rIdx: idx,
+              rId: r.id !== undefined ? Number(r.id) : -1,
+              fId: f.id,
+            });
           }
         }
       }
-      
+
       return {
         results,
         search: input.search,
