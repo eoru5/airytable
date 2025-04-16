@@ -61,7 +61,7 @@ export default function TableCell({
         table.options.meta?.updateData(row.index, column.id, cell?.value);
       }
     } catch (error) {
-      console.log("Error occured, resetting value");
+      console.log("Error occured, resetting value ", error);
       // else reset to init val
       setValue(initialValue);
     }

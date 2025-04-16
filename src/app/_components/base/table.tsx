@@ -25,16 +25,10 @@ import React, {
 import { api } from "~/trpc/react";
 import TableCell from "./table-cell";
 import AddFieldButton from "./add-field-button";
-import ColumnIcon from "./column-icon";
 import AddRecordButton from "./add-record-button";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import LoadingCircle from "../loading-circle";
-import { createQueryClient } from "~/trpc/query-client";
-import { getQueryKey } from "@trpc/react-query";
-import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
-import DeleteButton from "../delete-button";
-import RenameButton from "../rename-button";
 import TableHeader from "./table-header";
 import TableNumberCell from "./table-number-cell";
 
@@ -76,7 +70,6 @@ export const textFilters = [
 export type ColumnFiltersState = ColumnFilter[];
 
 export type TableRecord = Record<string, unknown>;
-type TableRecords = TableRecord[];
 export type TableField = {
   id: number;
   name: string;
@@ -170,7 +163,8 @@ export default function Table({
               searchPos !== null &&
               search !== "" &&
               searchResults.length > 0 &&
-              String(props.getValue() || "").includes(search)
+              props.getValue() !== undefined &&
+              String(props.getValue()).includes(search)
             }
             highlightDark={
               searchPos === null
@@ -291,11 +285,7 @@ export default function Table({
     }
   }, [searching]);
 
-  const {
-    data: searchData,
-    refetch,
-    isPending: searchIsPending,
-  } = api.table.search.useQuery(
+  const { refetch, isPending: searchIsPending } = api.table.search.useQuery(
     { tableId, viewId, search },
     { enabled: false },
   );
@@ -320,14 +310,16 @@ export default function Table({
   useEffect(() => {
     if (search !== "") {
       setSearchResults([]);
-      refetch().then(({ data }) => {
-        // need to use the latest search string
-        if (data?.search === search) {
-          setSearchPos(0);
-          setSearchResults(data.results);
-          console.log(data.results);
-        }
-      });
+      refetch()
+        .then(({ data }) => {
+          // need to use the latest search string
+          if (data?.search === search) {
+            setSearchPos(0);
+            setSearchResults(data.results);
+            console.log(data.results);
+          }
+        })
+        .catch((err) => console.log(err));
     }
   }, [search]);
 
@@ -351,7 +343,13 @@ export default function Table({
         searchResults.length > 0 &&
         searchPos !== null
       ) {
-        changeSearchPos((searchPos + 1) % searchResults.length);
+        if (e.shiftKey) {
+          changeSearchPos(
+            (searchPos - 1 + searchResults.length) % searchResults.length,
+          );
+        } else {
+          changeSearchPos((searchPos + 1) % searchResults.length);
+        }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -382,7 +380,8 @@ export default function Table({
             }),
           );
           setSearchPos(pos);
-        });
+        })
+        .catch((err) => console.log(err));
     } else {
       setSearchPos(pos);
     }

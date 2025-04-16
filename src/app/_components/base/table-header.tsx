@@ -8,7 +8,6 @@ import ColumnIcon from "./column-icon";
 import type { TableField, TableRecord } from "./table";
 import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
-import { useRouter } from "next/navigation";
 
 export default function TableHeader({
   field,

@@ -1,10 +1,5 @@
 "use client";
 
-import type { SortingState } from "@tanstack/react-table";
-import type { ColumnFiltersState, TableFields } from "./table";
-import ViewNavbarFilter from "./view-navbar-filter";
-import ViewNavbarSort from "./view-navbar-sort";
-import ViewNavbarHideFields from "./view-navbar-hide-fields";
 import type { Dispatch, SetStateAction } from "react";
 
 export default function ViewNavbarSearch({
