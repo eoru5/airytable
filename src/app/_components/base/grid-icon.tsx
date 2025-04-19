@@ -6,7 +6,7 @@ export default function Grid() {
       viewBox="0 0 24 24"
       strokeWidth={1.5}
       stroke="currentColor"
-      className="size-6"
+      className="size-5"
     >
       <path
         strokeLinecap="round"

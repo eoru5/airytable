@@ -393,7 +393,7 @@ export default function Table({
       <LoadingCircle />
     </div>
   ) : (
-    <div className="relative h-full w-full overflow-auto bg-neutral-200/80">
+    <div className="relative h-full w-full overflow-auto bg-neutral-100">
       {searching && (
         <div className="absolute top-0 right-0 z-20 mr-4 flex w-[300px] flex-col border-1 border-t-0 border-neutral-300 bg-white text-sm font-light select-none">
           <div className="flex items-center justify-between gap-2 px-2 py-1.5">
@@ -523,7 +523,7 @@ export default function Table({
         </div>
       )}
       <div
-        className="relative h-full w-full overflow-auto bg-neutral-200/80"
+        className="relative h-full w-full overflow-auto"
         ref={tableContainerRef}
         onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
       >
