@@ -185,7 +185,7 @@ export default function View({
               </svg>
             </Button>
 
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-sm px-3 py-2 transition duration-150 hover:bg-neutral-300">
+            {/* <div className="flex w-full cursor-pointer items-center justify-between rounded-sm px-3 py-2 transition duration-150 hover:bg-neutral-300">
               <div className="flex items-center gap-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -451,7 +451,7 @@ export default function View({
                   d="M12 4.5v15m7.5-7.5h-15"
                 />
               </svg>
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="h-full w-full">

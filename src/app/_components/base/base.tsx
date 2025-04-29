@@ -103,7 +103,7 @@ export default function Base({
             </div>
           </div>
 
-          <div
+          {/* <div
             className={`${secondaryColor} flex items-center gap-6 rounded-tl-md px-4 text-sm font-light text-white`}
           >
             <div>Extensions</div>
@@ -122,7 +122,7 @@ export default function Base({
                 />
               </svg>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <View baseId={baseId} tableId={tableId} viewId={viewId} />

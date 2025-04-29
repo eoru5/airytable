@@ -32,7 +32,7 @@ export default function ViewNavbar({
   return (
     <div className="flex items-center justify-between gap-2 border-b-1 border-neutral-300 bg-white px-3 py-2 text-sm font-light">
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 rounded-md bg-neutral-200 px-2 py-1">
+        {/* <div className="flex items-center gap-1 rounded-md bg-neutral-200 px-2 py-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -93,7 +93,7 @@ export default function ViewNavbar({
               clipRule="evenodd"
             />
           </svg>
-        </div>
+        </div> */}
 
         <ViewNavbarHideFields
           hiddenFields={hiddenFields}
@@ -105,7 +105,7 @@ export default function ViewNavbar({
           columnFilters={columnFilters}
           setColumnFilters={setColumnFilters}
         />
-
+{/* 
         <div className="flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -122,14 +122,14 @@ export default function ViewNavbar({
             />
           </svg>
           Group
-        </div>
+        </div> */}
 
         <ViewNavbarSort
           sorting={sorting}
           setSorting={setSorting}
           fields={fields}
         />
-
+{/* 
         <div className="flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -146,9 +146,9 @@ export default function ViewNavbar({
             />
           </svg>
           Group
-        </div>
+        </div> */}
 
-        <div className="flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
+        {/* <div className="flex cursor-pointer items-center gap-1 rounded-sm px-3 py-1 transition duration-150 hover:bg-neutral-200">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -181,7 +181,7 @@ export default function ViewNavbar({
             />
           </svg>
           Share and sync
-        </div>
+        </div> */}
       </div>
 
       <div>

@@ -21,7 +21,7 @@ export default function Navbar() {
     <header className="z-10 flex w-full items-center bg-white shadow-sm">
       <nav className="flex w-full items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4 text-neutral-400">
-          <svg
+          {/* <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -34,14 +34,14 @@ export default function Navbar() {
               strokeLinejoin="round"
               d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
             />
-          </svg>
+          </svg> */}
 
           <Link href="/">
             <TextLogo text="xl" size={0.8} />
           </Link>
         </div>
 
-        <div className="flex w-[350px] items-center justify-between rounded-full border-1 border-neutral-300 px-3 py-1 text-sm font-light text-neutral-500 shadow-sm">
+        {/* <div className="flex w-[350px] items-center justify-between rounded-full border-1 border-neutral-300 px-3 py-1 text-sm font-light text-neutral-500 shadow-sm">
           <div className="flex items-center gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -60,10 +60,10 @@ export default function Navbar() {
             Search...
           </div>
           ctrl K
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1 text-sm font-light text-neutral-800">
+          {/* <div className="flex items-center gap-1 text-sm font-light text-neutral-800">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -93,7 +93,7 @@ export default function Navbar() {
               strokeLinejoin="round"
               d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
             />
-          </svg>
+          </svg> */}
           <Menu>
             <MenuButton>
               <Image

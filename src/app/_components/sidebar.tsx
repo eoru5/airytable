@@ -30,7 +30,7 @@ export default function Sidebar({
             />
           </svg>
         </Link>
-
+{/* 
         <div className="flex cursor-pointer items-center justify-between rounded-sm px-4 py-2 font-light transition duration-200 ease-in-out hover:bg-neutral-200">
           All workspaces
           <div className="flex items-center gap-2 text-neutral-600">
@@ -55,12 +55,12 @@ export default function Sidebar({
               />
             </svg>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex w-full flex-col gap-3 px-2 text-sm text-neutral-600">
         <hr className="h-0.5 border-neutral-300" />
-        <div className="flex items-center gap-1">
+        {/* <div className="flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -110,7 +110,7 @@ export default function Sidebar({
             />
           </svg>
           Import
-        </div>
+        </div> */}
         <Button
           onClick={createOnClick}
           className="text-md flex cursor-pointer items-center justify-center gap-2 rounded-sm bg-blue-600 px-3 py-2 font-semibold text-white transition duration-200 ease-in-out data-[hover]:bg-blue-700 data-[hover]:data-[active]:bg-blue-800"

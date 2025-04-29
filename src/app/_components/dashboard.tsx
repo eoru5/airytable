@@ -44,7 +44,7 @@ export default function Dashboard() {
         <div className="flex grow flex-col gap-10 bg-gray-50 p-10">
           <h1 className="text-3xl font-bold">Home</h1>
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm font-light text-neutral-600 tracking-tight">
               <div className="flex items-center gap-1">
                 Opened by you
@@ -105,7 +105,7 @@ export default function Dashboard() {
                 />
               </svg>
             </div>
-          </div>
+          </div> */}
 
           <Suspense fallback={<Loading />}>
             <div className="flex flex-wrap gap-6">
